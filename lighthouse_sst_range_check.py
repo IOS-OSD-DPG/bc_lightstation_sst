@@ -23,7 +23,7 @@ summary_stats_df = pd.DataFrame(
 
 # Iterate through the files doing a range check on each observation
 for f in input_files:
-    dfin = pd.read_csv(f, skiprows=1, na_values=999.9)
+    dfin = pd.read_csv(f, skiprows=1, na_values=[999.9, 999.99])
     dfin['T_range_flag'] = np.logical_or(
         dfin.loc[:, 'TEMPERATURE ( C )'] < COAST_N_PAC_RANGE_0m[0],
         dfin.loc[:, 'TEMPERATURE ( C )'] > COAST_N_PAC_RANGE_0m[1])  # np.zeros(len(dfin))

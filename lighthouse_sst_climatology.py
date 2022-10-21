@@ -22,7 +22,7 @@ clim_df = pd.DataFrame(
     columns=pd.read_csv(file_list[0], skiprows=1, index_col='YEAR').columns)
 
 for f in file_list:
-    dfin = pd.read_csv(f, skiprows=1, index_col='YEAR', na_values=999.99)
+    dfin = pd.read_csv(f, skiprows=1, index_col='YEAR', na_values=[999.9, 999.99])
     clim_df.loc[basename(f), :] = dfin.loc[1991:2020].mean(axis=0)
 
 output_dir = parent_dir + 'climatological_monthly_means\\'
