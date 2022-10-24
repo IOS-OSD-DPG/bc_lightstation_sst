@@ -6,7 +6,7 @@ import numpy as np
 
 
 def plot_lighthouse_t(anom_file, station_name, output_dir):
-    anom_df = pd.read_csv(anom_file, index_col='YEAR')
+    anom_df = pd.read_csv(anom_file, index_col=[0])
     n_years = len(anom_df)
     n_months = 12
 
@@ -88,7 +88,7 @@ parent_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\' \
 # Plot climatological monthly means at each station
 
 # Plot lighthouse temperature anomalies with linear trendline
-data_dir = parent_dir + 'monthly_anomalies\\'
+data_dir = parent_dir + 'monthly_mean_anomalies\\'
 anom_files = glob.glob(data_dir + '*.csv')
 
 station_names = [
@@ -99,8 +99,8 @@ station_names = [
 anom_files.sort()
 station_names.sort()
 
-for i in range(len(anom_files)):
-    plot_lighthouse_t(anom_files[i], station_names[i], output_dir=data_dir)
+for k in range(len(anom_files)):
+    plot_lighthouse_t(anom_files[k], station_names[k], output_dir=data_dir)
 
 # ---------------------------------------------------------------
 
