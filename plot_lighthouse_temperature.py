@@ -5,7 +5,7 @@ import glob
 import numpy as np
 
 
-def plot_lighthouse_t(anom_file, station_name, output_dir):
+def plot_lighthouse_t(anom_file, station_name, output_dir, subplot_letter):
     anom_df = pd.read_csv(anom_file, index_col=[0])
     n_years = len(anom_df)
     n_months = 12
@@ -24,7 +24,7 @@ def plot_lighthouse_t(anom_file, station_name, output_dir):
     date_flat = date_numeric.flatten()
     anom_flat = anom_df.to_numpy().flatten()
 
-    fig, ax = plt.subplots(figsize=[6, 3])  # width, height
+    fig, ax = plt.subplots(figsize=[6,3])  # width, height [6,3] [3.12, 1.56]
 
     ax.plot(date_flat, anom_flat, c='grey')
 
@@ -51,10 +51,11 @@ def plot_lighthouse_t(anom_file, station_name, output_dir):
     plt.tick_params(which='minor', direction='in',
                     bottom=True, top=True, left=True, right=True)
     # ax.tick_params(axis='x', which='minor', bottom=False, direction='in')
-    ax.set_title(
-        f'Time series of temperature anomalies at {station_name}')
+    # ax.set_title(
+    #     f'Time series of temperature anomalies at {station_name}')
+    ax.set_title(f'({subplot_letter}) {station_name}')
     plt.tight_layout()
-    png_filename = station_name.replace(' ', '_') + '_anomalies.png'
+    png_filename = station_name.replace(' ', '_') + '_monthly_mean_sst_anomalies.png'
     plt.savefig(output_dir + png_filename)
     plt.close()
     return
@@ -99,8 +100,11 @@ station_names = [
 anom_files.sort()
 station_names.sort()
 
+subplot_letters = 'abcdefgh'
+
 for k in range(len(anom_files)):
-    plot_lighthouse_t(anom_files[k], station_names[k], output_dir=data_dir)
+    plot_lighthouse_t(anom_files[k], station_names[k], output_dir=data_dir,
+                      subplot_letter=subplot_letters[k])
 
 # ---------------------------------------------------------------
 
