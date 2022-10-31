@@ -31,8 +31,7 @@ for i in range(len(files1)):
         # df2.dropna(axis='index', how='all', inplace=True)
         arr2 = df2.to_numpy()
         dfout = pd.DataFrame(
-            data=arr2-arr1, index=pd.read_csv(files2[i]).index,
-            columns=pd.read_csv(files2[i]).columns[1:])
+            data=arr2-arr1, index=df2.index, columns=df2.columns)
         dfout_filename = output_dir + f'{station_names[i]}_monthly_anom_diffs.csv'
         dfout.to_csv(dfout_filename, index=True)
     else:

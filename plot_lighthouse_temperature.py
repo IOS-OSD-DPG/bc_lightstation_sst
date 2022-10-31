@@ -5,7 +5,8 @@ import glob
 import numpy as np
 
 
-def plot_lighthouse_t(anom_file, station_name, output_dir, subplot_letter):
+def plot_lighthouse_t(anom_file, station_name, subplot_letter, plot_name,
+                      best_fit: bool):
     anom_df = pd.read_csv(anom_file, index_col=[0])
     n_years = len(anom_df)
     n_months = 12
@@ -24,19 +25,20 @@ def plot_lighthouse_t(anom_file, station_name, output_dir, subplot_letter):
     date_flat = date_numeric.flatten()
     anom_flat = anom_df.to_numpy().flatten()
 
-    fig, ax = plt.subplots(figsize=[6,3])  # width, height [6,3] [3.12, 1.56]
+    fig, ax = plt.subplots(figsize=[6, 3])  # width, height [6,3] [3.12, 1.56]
 
     ax.plot(date_flat, anom_flat, c='grey')
 
     # Add a best-fit line
-    # First remove nans
-    date_nonan = date_flat[~np.isnan(anom_flat)]
-    anom_nonan = anom_flat[~np.isnan(anom_flat)]
-    # Compute polynomial
-    poly = np.polynomial.Polynomial.fit(
-        date_nonan, anom_nonan, deg=1)
-    x_linspace, y_hat_linspace = poly.linspace(n=100)
-    ax.plot(x_linspace, y_hat_linspace, c='k')
+    if best_fit:
+        # First remove nans
+        date_nonan = date_flat[~np.isnan(anom_flat)]
+        anom_nonan = anom_flat[~np.isnan(anom_flat)]
+        # Compute polynomial
+        poly = np.polynomial.Polynomial.fit(
+            date_nonan, anom_nonan, deg=1)
+        x_linspace, y_hat_linspace = poly.linspace(n=100)
+        ax.plot(x_linspace, y_hat_linspace, c='k')
 
     # Plot formatting
     ax.set_xlim((min(date_flat), max(date_flat)))
@@ -55,9 +57,8 @@ def plot_lighthouse_t(anom_file, station_name, output_dir, subplot_letter):
     #     f'Time series of temperature anomalies at {station_name}')
     ax.set_title(f'({subplot_letter}) {station_name}')
     plt.tight_layout()
-    png_filename = station_name.replace(' ', '_') + '_monthly_mean_sst_anomalies.png'
-    plt.savefig(output_dir + png_filename)
-    plt.close()
+    plt.savefig(plot_name)
+    plt.close(fig)
     return
 
 
@@ -89,22 +90,35 @@ parent_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\' \
 # Plot climatological monthly means at each station
 
 # Plot lighthouse temperature anomalies with linear trendline
-data_dir = parent_dir + 'monthly_mean_anomalies\\'
-anom_files = glob.glob(data_dir + '*.csv')
+data_dir = parent_dir + 'monthly_anom_from_monthly_mean\\'
+anom_files = glob.glob(data_dir + '*.csv', recursive=False)
 
 station_names = [
     os.path.basename(folder).replace('_', ' ')
     for folder in glob.glob(parent_dir + 'DATA_-_Active_Sites\\*')
 ]
+subplot_letters = 'abcdefgh'
 
 anom_files.sort()
 station_names.sort()
 
-subplot_letters = 'abcdefgh'
-
 for k in range(len(anom_files)):
-    plot_lighthouse_t(anom_files[k], station_names[k], output_dir=data_dir,
-                      subplot_letter=subplot_letters[k])
+    png_filename = data_dir + station_names[k].replace(' ', '_') + '_monthly_mean_sst_anomalies.png'
+
+    plot_lighthouse_t(anom_files[k], station_names[k],
+                      subplot_letter=subplot_letters[k],
+                      plot_name=png_filename, best_fit=True)
+
+# Differences
+diff_dir = parent_dir + 'monthly_anom_differences\\'
+diff_files = glob.glob(diff_dir + '*.csv')
+diff_files.sort()
+
+for k in range(len(diff_files)):
+    png_filename = diff_dir + station_names[k].replace(' ', '_') + '_sst_anomaly_diffs.png'
+    plot_lighthouse_t(diff_files[k], station_names[k],
+                      subplot_letter=subplot_letters[k],
+                      plot_name=png_filename, best_fit=False)
 
 # ---------------------------------------------------------------
 
