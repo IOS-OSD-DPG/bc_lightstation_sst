@@ -1,6 +1,6 @@
 ## bc_lighthouse_sst
 
-Note: The project is still underway as the autocorrelation of the dataset needs to be dealt with.
+Note: The project is still underway as the autocorrelation of the dataset needs to be dealt with.  
 \
 Make plots of BC lighthouse sea surface temperature anomalies relative to climatologies for 1991-2020. Mean climatologies for 1991-2020 are computed and subtracted from monthly mean observations from all time. The resulting anomalies are plotted.
 
