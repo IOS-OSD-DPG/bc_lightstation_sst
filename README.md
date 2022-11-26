@@ -9,3 +9,5 @@ Processing order:
 2. sst_daily_anomalies.py
 3. sst_monthly_mean_anomalies.py
 4. plot_lighthouse_temperature.py
+
+*anomaly_method_differences.py* compares two ways of calculating monthly mean anomalies. One method is to subtract the climatology from daily data to get daily anomalies, then take monthly means of the daily anomalies. The other method is to subtract the climatology from monthly mean data to get the monthly mean anomalies. The second method agrees with other data collection projects by IOS so is used here.
