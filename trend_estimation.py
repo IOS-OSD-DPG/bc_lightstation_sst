@@ -16,29 +16,30 @@ import statsmodels.api as sm
 from scipy.stats import t
 
 
-def acvf_te(y, N_max):
-    """DEPREC
-    Autocovariance function for serially correlated data record.
-    Thomson & Emery (2014) eqn. 3.139a.
-    :param N_max: Maximum number of reasonable lag values (starting at zero lag and
-    going to (<<N/2) that can be calculated before the summation becomes erratic.
-    :param y: The dependent variable
-    :return: CC(tau_kappa), where tau_kappa = k * dtau and dtau is the lag time step
-    """
-    y_bar = np.mean(y)
-    N = len(y)
-    CC = np.zeros(N)
-    # +1 because Python ranges not inclusive
-    for k in range(0, N_max + 1):
-        for i in range(1, N - k):
-            CC[k] += (y[i] - y_bar) * (y[i + k] - y_bar)
-        CC[k] *= 1 / (N - 1 - k)
-        # C[0] should equal np.var(y), the variance of the series
-    return CC
+# def acvf_te(y, N_max):
+#     """DEPREC
+#     Autocovariance function for serially correlated data record.
+#     Thomson & Emery (2014) eqn. 3.139a.
+#     :param N_max: Maximum number of reasonable lag values (starting at zero lag and
+#     going to (<<N/2) that can be calculated before the summation becomes erratic.
+#     :param y: The dependent variable
+#     :return: CC(tau_kappa), where tau_kappa = k * dtau and dtau is the lag time step
+#     """
+#     y_bar = np.mean(y)
+#     N = len(y)
+#     CC = np.zeros(N)
+#     # +1 because Python ranges not inclusive
+#     for k in range(0, N_max + 1):
+#         for i in range(1, N - k):
+#             CC[k] += (y[i] - y_bar) * (y[i + k] - y_bar)
+#         CC[k] *= 1 / (N - 1 - k)
+#         # C[0] should equal np.var(y), the variance of the series
+#     return CC
 
 
 def C(k, y):
     """
+    Thomson & Emery (2014), eqn. 3.139a
     Autocovariance function for some k in [0,...,N_max]
     :param k:
     :param y: data series
@@ -57,6 +58,14 @@ def C(k, y):
 
 
 def integral_timescale_discrete(dtau, y, m):
+    """
+    Thomson & Emery (2014), eqn. 3.137a
+    Integral timescale T for a data record, discrete case
+    :param dtau: lag time step
+    :param y: data record
+    :param m: number of lag values included in the summation
+    :return: T, the discrete integral timescale
+    """
     T = 0
     # m = N_max ?
     # todo confirm indexing is correct
@@ -84,7 +93,7 @@ def effective_sample_size(N, dt, T):
 def flatten_dframe(df: pd.DataFrame):
     """
     Flatten dataframe into 1d. Convert year-month to float date.
-    :param df:
+    :param df: dataframe with years as row indices and months of each year as column indices
     :return: flattened date (x) and flattened temperature record (y)
     """
     years = df.index.to_numpy(float)
@@ -97,6 +106,7 @@ def flatten_dframe(df: pd.DataFrame):
 
 def standard_error_of_estimate(y, y_est):
     """
+    Thomson & Emery (2014), eqn. 3.134
     compute the standard error of the estimate, s_eta
     :param y:
     :param y_est: y-hat
@@ -110,6 +120,7 @@ def standard_error_of_estimate(y, y_est):
 
 def std_dev_x(x):
     """
+    Thomson & Emery (2014), eqn. 3.135a
     Standard deviation for the x variable
     :param x:
     :return:
@@ -123,6 +134,7 @@ def std_dev_x(x):
 
 def conf_limit(s_eta, N_star, s_x):
     """
+    Thomson & Emery (2014), eqn. 3.136a
     Compute the confidence limit on least squares slope
     :param s_eta: standard error of the estimate
     :param N_star: effective sample size
@@ -139,6 +151,7 @@ def conf_limit(s_eta, N_star, s_x):
 
 
 def nans_to_strip(N: int):
+    """From Patrick Cummins Matlab script"""
     nstrip = np.zeros((N, 2), dtype=int)
     nstrip[0, :] = [7, 8]  # Amphitrite
     nstrip[1, :] = [3, 8]  # Bonilla
@@ -152,6 +165,7 @@ def nans_to_strip(N: int):
 
 
 def treat_nans(x: np.ndarray, y: np.ndarray, nstart: int, nend: int):
+    """From Patrick Cummins Matlab script"""
     # Remove leading and trailing nans
     xx = x[nstart:-nend]
     yy = y[nstart:-nend]
@@ -323,7 +337,7 @@ def main_ols():
 
 def TheilSen_Cummins(data):
     """
-    Patrick Cummin's Theil-Sen regression code, translated from Matlab
+    Patrick Cummins' Theil-Sen regression code, translated from Matlab
     :param data: A MxD matrix with M observations. The first D-1 columns
     are the explanatory variables and the Dth column is the response such that
     data = [x1, x2, ..., x(D-1), y]
@@ -604,11 +618,12 @@ def calc_trend(max_siml=None, ncores_to_use=None, sen_flag=0):
                                    max_siml, regression_type)))
     return
 
+
 # ------------------------------------------------------------------------
 
-
-calc_trend(max_siml=50000, ncores_to_use=None, sen_flag=0)
-calc_trend(max_siml=50000, ncores_to_use=None, sen_flag=2)
+# # Patrick
+# calc_trend(max_siml=50000, ncores_to_use=None, sen_flag=0)
+# calc_trend(max_siml=50000, ncores_to_use=None, sen_flag=2)
 
 """
 # Testing
