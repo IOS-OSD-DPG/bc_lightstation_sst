@@ -26,7 +26,7 @@ The second method is a Monte Carlo approach used by Cummins & Masson (2014). Thi
 </details>
 
 ### Monthly mean SST climatologies, 1991-2020
-<img_src="./figures/bc_lightstation_monthly_mean_climatologies_1991-2020.png" width="500"/>
+<img src="./figures/bc_lightstation_monthly_mean_climatologies_1991-2020.png" width="500"/>
 
 ### References
 Cummins, P. F. & Ross, T. (2020). Secular trends in water properties at Station P in the northeast Pacific: An updated analysis. Progress in Oceanography, *186*(2020). https://doi.org/10.1016/j.pocean.2020.102329  
