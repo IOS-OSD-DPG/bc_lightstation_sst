@@ -4,7 +4,7 @@ import os
 import glob
 import numpy as np
 from patsy import dmatrices
-import statsmodels.api as sm
+from statsmodels.api import OLS
 
 
 def lstq_model(anom_1d, date_numeric_1d):
@@ -19,7 +19,7 @@ def lstq_model(anom_1d, date_numeric_1d):
     # create design matrices
     y, X = dmatrices('Anomaly ~ Date', data=dfmod, return_type='dataframe')
 
-    mod = sm.OLS(y, X)  # Describe model
+    mod = OLS(y, X)  # Describe model
 
     res = mod.fit()  # Fit model, return regression results
 
@@ -27,7 +27,7 @@ def lstq_model(anom_1d, date_numeric_1d):
     return res
 
 
-def flatten_date(all_years):
+def date_to_flat_numeric(all_years):
     # Convert the names of the months to numeric
 
     n_years = len(all_years)
@@ -51,7 +51,7 @@ def plot_lighthouse_t(anom_file, station_name, subplot_letter, plot_name,
     # station_name = anom_file.split('_')[0] + ' ' + anom_file.split('_')[1]
 
     # Flatten the data into 1 dim for plot
-    date_flat = flatten_date(anom_df.index)
+    date_flat = date_to_flat_numeric(anom_df.index)
     anom_flat = anom_df.to_numpy().flatten()
 
     fig, ax = plt.subplots(figsize=[6, 3])  # width, height [6,3] [3.12, 1.56]
@@ -123,7 +123,7 @@ def plot_climatology(clim_file, output_dir):
     ax.set_ylabel('Temperature ($^\circ$C)')
     ax.set_title('Climatological monthly mean temperatures for 1991-2020')
     plt.tight_layout()
-    png_filename = 'bc_lighthouse_monthly_mean_climatologies_1991-2020.png'
+    png_filename = 'bc_lightstation_monthly_mean_climatologies_1991-2020.png'
     plt.savefig(os.path.join(output_dir, png_filename))
     plt.close()
     return
@@ -138,7 +138,7 @@ def plot_filled_sst_resid(anom_file, all_time_mean, plot_name):
     print(station_name)
 
     # Flatten the data into 1 dim for plot
-    date_flat = flatten_date(anom_df.index)
+    date_flat = date_to_flat_numeric(anom_df.index)
     anom_flat = anom_df.to_numpy().flatten()
 
     # Make the least squares linear model
@@ -197,7 +197,7 @@ def plot_filled_daily_sst(daily_file, plot_name):
     mean_temp = df.loc[:, 'TEMPERATURE ( C )'].mean(skipna=True)
 
     # Check for missing data
-    percent_missing_data = sum(df.loc[:, 'TEMPERATURE ( C )'].isna()) / len(df)
+    percent_missing_data = sum(df.loc[:, 'TEMPERATURE ( C )'].isna()) / len(df) * 100
     print('{:.2f}'.format(percent_missing_data), 'percent missing data')
 
     # Replace nan in temperature time series with "normal" value
@@ -234,12 +234,37 @@ def plot_filled_daily_sst(daily_file, plot_name):
     yy = yy[365:len(yy) - 366]
 
     # Calculate the long-term trend
-    poly = np.polynomial.Polynomial.fit(x, yy, deg=1)
+
+    # poly = np.polynomial.Polynomial.fit(x, yy, deg=1)
+    # # Reduce data points to yearly representers
+    # x2, y2 = poly.linspace(n=len(x[::365]))
+    # # Calculate trend in deg C per 100 y
+    # # trend = (y2[-1] - y2[0])/(x2[-1] - x2[0]) * 100  # by hand
+    # trend = poly.convert().coef[1] * 100
+
+    # Use statsmodels
+    res = lstq_model(yy, x)
     # Reduce data points to yearly representers
-    x2, y2 = poly.linspace(n=len(x[::365]))
-    # Calculate trend in deg C per 100 y
-    # trend = (y2[-1] - y2[0])/(x2[-1] - x2[0]) * 100  # by hand
-    trend = poly.convert().coef[1] * 100
+    y2 = res.fittedvalues[::365]
+    x2 = x[::365]
+    # Calculate the trend in deg C per 100 years
+    trend = res.params.iloc[1] * 100
+
+    # Calculate the 95% confidence interval on the trend
+
+    # # CI for predicted mean
+    # # The array has the lower and the upper limit of the confidence
+    # # interval in the columns.
+    # ci95_predint = res.get_prediction().conf_int(alpha=0.05)
+    # CI for the estimated parameters in deg C per 100 years
+    ci95_estparam = res.conf_int(alpha=0.05)
+    diff1, diff2 = ci95_estparam.iloc[1, :] * 100 - trend
+    # Arbitrary threshold
+    if diff1 + diff2 > 1e-8:
+        print('upper and lower confidence intervals not equal', abs(diff1), diff2)
+        return
+    else:
+        ci95_trend = abs(diff1)
 
     # Make the plot
 
@@ -265,7 +290,8 @@ def plot_filled_daily_sst(daily_file, plot_name):
     plt.text(
         0.03, 0.89,
         station_name + ' mean temperature ' + str(rounded_mean) +
-        '$^{\circ}$C, trend ' + '{:.2f}'.format(trend) + '$^{\circ}$C/100y',
+        '$^{\circ}$C, trend ' + r'{:.2f} $\pm$ {:.2f}'.format(trend, ci95_trend) +
+        '$^{\circ}$C/100y',
         transform=ax.transAxes, backgroundcolor='white')
 
     # Save fig
@@ -373,5 +399,5 @@ output_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\our_warming_ocean\\' \
 
 for f in daily_files:
     stn = os.path.basename(f).split('_')[0] + '_' + os.path.basename(f).split('_')[1]
-    png_filename = output_dir + stn + '_trend_from_daily_sst.png'
-    plot_filled_daily_sst(f, png_filename)
+    plot_filename = output_dir + stn + '_trend_ci_from_daily_sst.png'
+    plot_filled_daily_sst(f, plot_filename)

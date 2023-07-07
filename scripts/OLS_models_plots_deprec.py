@@ -1,3 +1,5 @@
+"""Uses wls_prediction_std which is old code from the sandbox that should not be used"""
+
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -125,3 +127,102 @@ for infile in data_files:
     #     os.path.basename(infile).replace('.csv', '_OLS.txt'))
     # with open(model_summary, 'w') as txtfile:
     #     txtfile.write(res.summary().as_text())
+
+# --------------------------Make tables-----------------------------
+
+# Calculate ols trend and accompanying 95% CI in deg. C/century
+
+# res.params returns the intercept (not needed) and the Date
+# the Date is the trend in deg. C/year
+
+stn_names = [os.path.basename(infile).split('_')[0] + ' ' +
+             os.path.basename(infile).split('_')[1]
+             for infile in data_files]
+print(stn_names)
+
+df_trends = pd.DataFrame(index=stn_names,
+                         columns=['OLS trend in deg. C/century',
+                                  '95% CI lower bd in deg. C/century',
+                                  '95% CI upper bd in deg. C/century',
+                                  'Trend minus lower bd',
+                                  'Upper bd minus trend'])
+
+n_months = 12
+
+for infile, station_name in zip(data_files, stn_names):
+    dfin = pd.read_csv(infile, index_col=[0])
+
+    # ------------------Flatten the data values-----------------
+    n_years = len(dfin)
+
+    # Flatten the data into 1 dim for plot
+    # Convert the names of the months to numeric
+    month_numeric = np.linspace(0, 1, 12 + 1)[:-1]
+
+    date_numeric = np.zeros(shape=(n_years, len(month_numeric)))
+    for i in range(n_years):
+        for j in range(n_months):
+            date_numeric[i, j] = dfin.index[i] + month_numeric[j]
+
+    date_flat = date_numeric.flatten()
+    anom_flat = dfin.to_numpy().flatten()
+
+    # ------------------OLS model fitting--------------------
+
+    # https://www.statsmodels.org/stable/gettingstarted.html
+
+    # Do not include nan values in the dataframe for the model
+    dfmod = pd.DataFrame(
+        {'Date': date_flat[~pd.isna(anom_flat)],
+         'Anomaly': anom_flat[~pd.isna(anom_flat)]}
+    )
+
+    # create design matrices
+    y, X = dmatrices('Anomaly ~ Date', data=dfmod, return_type='dataframe')
+
+    mod = sm.OLS(y, X)  # Describe model
+    res = mod.fit()  # Fit model
+
+    y = res.model.endog
+    x1 = res.model.exog[:, 1]  # Date
+    x1_argsort = np.argsort(x1)
+    y = y[x1_argsort]
+    x1 = x1[x1_argsort]
+    # Get 95% confidence intervals
+    # calculate standard deviation and confidence interval for prediction
+    # iv_l, iv_u: lower and upper confidence bounds; (default: alpha = 0.05)
+    _, iv_l, iv_u = wls_prediction_std(res)
+
+    df_trends.loc[station_name, 'OLS trend in deg. C/century'
+                  ] = np.round(res.params['Date'] * 100, 2)
+    # df_trends.loc[station_name, '95% CI lower bd in deg. C/century'
+    #               ] = np.round(res.conf_int(alpha=0.05).loc['Date', 0] * 100, 2)
+    # df_trends.loc[station_name, '95% CI upper bd in deg. C/century'
+    #               ] = np.round(res.conf_int(alpha=0.05).loc['Date', 1] * 100, 2)
+    # df_trends.loc[station_name, 'Trend minus lower bd'] = np.round(
+    #     (res.params['Date'] - res.conf_int(alpha=0.05).loc['Date', 0]) * 100,
+    #     2
+    # )
+    # df_trends.loc[station_name, 'Upper bd minus trend'] = np.round(
+    #     (res.conf_int(alpha=0.05).loc['Date', 1] - res.params['Date']) * 100,
+    #     2
+    # )
+    # # wls_prediction_std() IS OLD CODE
+    # df_trends.loc[station_name, 'Mean of trend minus lower bd'
+    #               ] = np.round(np.mean(res.fittedvalues-iv_l), 2)
+    # df_trends.loc[station_name, 'Mean of upper bd minus trend'
+    #               ] = np.round(np.mean(iv_u - res.fittedvalues), 2)
+    df_trends.loc[station_name, 'Mean of trend minus lower bd'
+                  ] = np.round(
+        np.mean(res.fittedvalues - res.get_prediction().conf_int()[:, 0]), 2
+    )
+    df_trends.loc[station_name, 'Mean of upper bd minus trend'
+                  ] = np.round(
+        np.mean(res.get_prediction().conf_int()[:, 1] - res.fittedvalues), 2
+    )
+
+print(df_trends)
+
+# Save the dataframe of trends
+df_trends_filename = parent_dir + 'least_squares\\lighthouse_sst_anom_OLS_trends_with_95p_CI_getpred.csv'
+df_trends.to_csv(df_trends_filename, index=True)
