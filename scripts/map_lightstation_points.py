@@ -46,7 +46,7 @@ for i in range(len(df.index)):
 # Plot formatting
 plot_name = '.\\figures\\current\\lightstation_map.png'
 plt.tight_layout()
-plt.savefig(plot_name, dpi=400)
+plt.savefig(plot_name)  # Save at lower quality than dpi=400
 plt.close(fig)
 
 # Reset the working directory
