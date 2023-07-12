@@ -14,25 +14,50 @@
 <!--<h1>{{ page.title }}</h1>-->
 <h1>BC Lightstation Sea-Surface Temperature</h1>
 <p style="line-height:1.5">
-    From Cummins & Masson (2014): "Surface water temperature and salinity have
-    been measured daily at several BC lighthouse stations for many decades.
-    [...] Water properties are measured from a
-    bucket sample drawn from the top meter of the water column
-    within an hour of local daytime high tide. Due to changes in instrumentation
-    and measurement technique, the nominal uncertainty
-    of the daily temperature and salinity observations has varied over
-    time from 0.3 to 0.1 &deg;C and 0.03 to 0.3 psu, respectively (Peter
-    Chandler, <i>pers. comm.</i>). The uncertainty on monthly averaged temperature
-    and salinity data should be no greater than 0.1 &deg;C and
-    0.1 psu, respectively."
+    Since the early 20th century, sea-surface temperature and salinity observations have been
+    recorded at lightstations on the coast of British Columbia. Today, this monitoring program
+    is known as the British Columbia Shore Station Oceanographic Program (BCSOP). Out of 12
+    currently active stations, the data from eight are presented here. The selected stations
+    were chosen because of the longevity of their records and for their coverage along BC's coast.
 </p>
 <p style="line-height:1.5">
-    The BC Lightstation sea-surface temperature data used here, as well as
+    The BC lightstation sea-surface temperature data used here, as well as
     sea-surface salinity data, can be found on
     <a href="https://open.canada.ca/data/en/dataset/719955f2-bf8e-44f7-bc26-6bd623e82884">Open Data</a>.
+    More information on the history of the program and on the sampling method can be found on Open Data
+    and in Cummins & Masson (2014).
 </p>
-<h2>Notes</h2>
+<details>
+  <summary>Click here to view map</summary>
+  <img src="./figures/current/lightstation_map.png" class="map" loading="lazy">
+  <p>
+      Map of the locations of the eight British Columbia lightstations featured on this page.
+  </p>
+</details>
+<h2>Monthly Averaged Data</h2>
+<h3>SST Climatology</h3>
+<img src="./figures/current/bc_lightstation_monthly_mean_climatologies_1991-2020.png" loading="lazy">
+<p>
+    30-year climatologies calculated from monthly mean observations.
+</p>
+<h3>Anomaly Time Series</h3>
+<p>
+    TODO Monthly mean anomalies computed from monthly mean observations by subtracting the
+    climatological monthly mean based on the 30 year period 1991-2020, for (a)
+    Amphitrite Point, (b) Bonilla Island, (c) Chrome Island, (d) Entrance Island,
+    (e) Kains Island, (f) Langara Island, (g) Pine Island, and (h) Race Rocks.
+</p>
+<p>
+    TODO Table of lighthouse stations and their analysis period and least-squares
+    fitted linear SST trend. Confidence intervals were computed using the Monte Carlo
+    approach described by Cummins & Masson (2014).
+</p>
+<h3>Notes</h3>
 <ul style="line-height:1.5">
+    <li>The monthly SST anomalies in Cummins & Masson (2014) were computed by
+        subtracting the climatological monthly mean based on the 30 year period
+        1981-2010. The monthly SST anomalies computed here were derived from the
+        1991-2020 climatological monthly mean.</li>
     <li>Any one-month gaps were filled with spline interpolation to get continuous
         records.</li>
     <li>For the Langara Island record, the analysis period for the 95% confidence
@@ -46,20 +71,11 @@
         record.  The least-squares trend for the abridged record is 1.28
         &deg;C/century compared with 1.29 &deg;C/century for the entire record.</li>
 </ul>
-<details>
-  <summary>Click here to view map</summary>
-  <img src="./figures/current/lightstation_map.png" class="map" loading="lazy">
-  <p>
-      Map of the locations of the eight British Columbia lightstations featured on this page.
-  </p>
-</details>
-<img src="./figures/current/bc_lightstation_monthly_mean_climatologies_1991-2020.png" loading="lazy">
-<p>
-    30-year climatologies calculated from monthly mean observations.
-</p>
 <h2>References</h2>
 <p style="line-height:1.5">
-    Cummins, P. F. & Masson, D. (2014). Climatic variability and trends in the surface waters of coastal British Columbia. Progress in Oceanography, <i>120</i>(2014), pp. 279–290. http://dx.doi.org/10.1016/j.pocean.2013.10.002
+    Cummins, P. F. & Masson, D. (2014). Climatic variability and trends in the surface
+    waters of coastal British Columbia. Progress in Oceanography, <i>120</i>(2014),
+    pp. 279–290. http://dx.doi.org/10.1016/j.pocean.2013.10.002
 </p>
 <h2>Contact</h2>
 <p>
@@ -75,6 +91,18 @@
 
 <!--</body>-->
 <!--</html>-->
+
+<!--From Cummins & Masson (2014): "Surface water temperature and salinity have-->
+<!--    been measured daily at several BC lighthouse stations for many decades.-->
+<!--    [...] Water properties are measured from a-->
+<!--    bucket sample drawn from the top meter of the water column-->
+<!--    within an hour of local daytime high tide. Due to changes in instrumentation-->
+<!--    and measurement technique, the nominal uncertainty-->
+<!--    of the daily temperature and salinity observations has varied over-->
+<!--    time from 0.3 to 0.1 &deg;C and 0.03 to 0.3 psu, respectively (Peter-->
+<!--    Chandler, <i>pers. comm.</i>). The uncertainty on monthly averaged temperature-->
+<!--    and salinity data should be no greater than 0.1 &deg;C and-->
+<!--    0.1 psu, respectively."-->
 
 </body>
 </html>
