@@ -1,15 +1,17 @@
-<!--<!DOCTYPE html>-->
-<!--<html lang="en">-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--</head>-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BC Lightstation Sea Surface Temperature</title>
+</head>
+<body>
 
----
-title: BC Lightstation Sea Surface Temperature
-layout: default
----
+<!-- -&#45;&#45;-->
+<!--title: BC Lightstation Sea Surface Temperature-->
+<!--layout: default-->
+<!-- -&#45;&#45;-->
 
-<h1>{{ page.title }}</h1>
+<!--<h1>{{ page.title }}</h1>-->
 <p>
     From Cummins & Masson (2014): "Surface water temperature and salinity have
     been measured daily at several BC lighthouse stations for many decades.
@@ -23,17 +25,45 @@ layout: default
     and salinity data should be no greater than 0.1 &deg;C and
     0.1 psu, respectively."
 </p>
+<p>
+    The BC Lightstation sea-surface temperature data used here, as well as
+    sea-surface salinity data, can be found on
+    <a href="https://open.canada.ca/data/en/dataset/719955f2-bf8e-44f7-bc26-6bd623e82884">Open Data</a>.
+</p>
+<h1>Notes</h1>
+<ul>
+    <li>Any one-month gaps were filled with spline interpolation to get continuous
+        records.</li>
+    <li>For the Langara Island record, the analysis period for the 95% confidence
+        interval starts in Mar. 1940 to avoid the 30-month data gap (Sept. 1937 -
+        Feb. 1940) near the beginning of the record. The least-squares trend for
+        the abridged record is 0.88 &deg;C/century compared with 0.86 &deg;C/century
+        for the entire record.</li>
+    <li>For the Entrance Island record, the analysis period
+        for the 95% confidence interval is limited to May 1936 - Dec. 2019 to avoid
+        interpolating over the extended data gaps occurring near the end of the
+        record.  The least-squares trend for the abridged record is 1.28
+        &deg;C/century compared with 1.29 &deg;C/century for the entire record.</li>
+</ul>
 <details>
-    <img src="./figures/bc_lightstation_monthly_mean_climatologies_1991-2020.png" loading="lazy">
-    <p>
-        30-year climatologies calculated from monthly mean observations.
-    </p>
+  <summary>Click here to view map</summary>
+  <img src=".figures/lightstation_map.png" class="map" loading="lazy">
+  <p>
+      Map of the locations of the eight British Columbia lightstations featured on this page.
+  </p>
 </details>
+<img src="./figures/bc_lightstation_monthly_mean_climatologies_1991-2020.png" loading="lazy">
+<p>
+    30-year climatologies calculated from monthly mean observations.
+</p>
 <h2>References</h2>
 <p>
     Cummins, P. F. & Masson, D. (2014). Climatic variability and trends in the surface waters of coastal British Columbia. Progress in Oceanography, <i>120</i>(2014), pp. 279–290. http://dx.doi.org/10.1016/j.pocean.2013.10.002
 </p>
-
+<h3>Contact</h3>
+<p>
+    DFO.PAC.SCI.IOSData-DonneesISO.SCI.PAC.MPO@dfo-mpo.gc.ca
+</p>
 <!--<!DOCTYPE html>-->
 <!--<html lang="en">-->
 <!--<head>-->
@@ -45,4 +75,5 @@ layout: default
 <!--</body>-->
 <!--</html>-->
 
+</body>
 </html>
