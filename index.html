@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>BC Lightstation Sea-Surface Temperature</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -13,14 +14,14 @@
 
 <!--<h1>{{ page.title }}</h1>-->
 <h1>BC Lightstation Sea-Surface Temperature</h1>
-<p style="line-height:1.5">
-    Since the early 20th century, sea-surface temperature and salinity observations have been
+<p>
+    Since the early 20th century, sea-surface temperature (SST) and salinity observations have been
     recorded at lightstations on the coast of British Columbia. Today, this monitoring program
-    is known as the British Columbia Shore Station Oceanographic Program (BCSOP). Out of 12
-    currently active stations, the data from eight are presented here. The selected stations
+    is known as the British Columbia Shore Station Oceanographic Program (BCSOP). The SST data from
+    eight out of 12 currently active stations are presented on this page. The selected stations
     were chosen because of the longevity of their records and for their coverage along BC's coast.
 </p>
-<p style="line-height:1.5">
+<p>
     The BC lightstation sea-surface temperature data used here, as well as
     sea-surface salinity data, can be found on
     <a href="https://open.canada.ca/data/en/dataset/719955f2-bf8e-44f7-bc26-6bd623e82884">Open Data</a>.
@@ -36,24 +37,47 @@
 </details>
 <h2>Monthly Averaged Data</h2>
 <h3>SST Climatology</h3>
-<img src="./figures/current/bc_lightstation_monthly_mean_climatologies_1991-2020.png" loading="lazy">
+<img src="./figures/current/bc_lightstation_monthly_mean_climatologies_1991-2020.png" height="400px" loading="lazy">
 <p>
-    30-year climatologies calculated from monthly mean observations.
+    30-year climatologies of sea-surface temperature for 1991-2020, calculated from monthly mean observations.
 </p>
 <h3>Anomaly Time Series</h3>
+<div class="grouped-plots">
+    <div class="column">
+        <img src="./figures/current/Amphitrite_Point_monthly_mean_sst_anomalies_theilsen.png" height="200px">
+    </div>
+    <div class="column">
+        <img src="./figures/current/Bonilla_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px">
+    </div>
+</div>
+<div class="grouped-plots">
+    <div class="image"> <img src="./figures/current/Chrome_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/current/Entrance_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+</div>
+<div class="grouped-plots">
+    <div class="image"> <img src="./figures/current/Kains_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/current/Langara_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+</div>
+<div class="grouped-plots">
+    <div class="image"> <img src="./figures/current/Pine_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/current/Race_Rocks_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+</div>
 <p>
-    TODO Monthly mean anomalies computed from monthly mean observations by subtracting the
+    Monthly mean anomalies computed from monthly mean observations by subtracting the
     climatological monthly mean based on the 30 year period 1991-2020, for (a)
     Amphitrite Point, (b) Bonilla Island, (c) Chrome Island, (d) Entrance Island,
     (e) Kains Island, (f) Langara Island, (g) Pine Island, and (h) Race Rocks.
 </p>
+<h3>Comparison of Trends</h3>
 <p>
-    TODO Table of lighthouse stations and their analysis period and least-squares
-    fitted linear SST trend. Confidence intervals were computed using the Monte Carlo
+    Table of lighthouse stations and their analysis period and least-squares
+    fitted linear SST trend. New results are listed after the results of Cummins & Masson
+    (2014) for comparison. Confidence intervals were computed using the Monte Carlo
     approach described by Cummins & Masson (2014).
 </p>
+<img src="./figures/current/monte_carlo_max_siml50000_st_cummins_cm2014.png" height="250px" loading="lazy">
 <h3>Notes</h3>
-<ul style="line-height:1.5">
+<ul>
     <li>The monthly SST anomalies in Cummins & Masson (2014) were computed by
         subtracting the climatological monthly mean based on the 30 year period
         1981-2010. The monthly SST anomalies computed here were derived from the
@@ -72,7 +96,7 @@
         &deg;C/century compared with 1.29 &deg;C/century for the entire record.</li>
 </ul>
 <h2>References</h2>
-<p style="line-height:1.5">
+<p>
     Cummins, P. F. & Masson, D. (2014). Climatic variability and trends in the surface
     waters of coastal British Columbia. Progress in Oceanography, <i>120</i>(2014),
     pp. 279–290. http://dx.doi.org/10.1016/j.pocean.2013.10.002

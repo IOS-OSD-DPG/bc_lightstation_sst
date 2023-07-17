@@ -1,0 +1,22 @@
+body {
+	margin: 60px auto;
+	width: 90%;
+}
+
+img {
+	max-width: 100%;
+	object-fit: contain;
+}
+
+.grouped-plots {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+}
+
+p {
+	line-height: 1.5;
+}
+
+ul {
+    line-height: 1.5;
+}
