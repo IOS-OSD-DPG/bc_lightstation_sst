@@ -14,6 +14,9 @@
 
 <!--<h1>{{ page.title }}</h1>-->
 <h1>BC Lightstation Sea-Surface Temperature</h1>
+<p style="color: grey">
+    July 2023
+</p>
 <p>
     Since the early 20th century, sea-surface temperature (SST) and salinity observations have been
     recorded at lightstations on the coast of British Columbia. Today, this monitoring program
@@ -22,45 +25,45 @@
     were chosen because of the longevity of their records and for their coverage along BC's coast.
 </p>
 <p>
-    The BC lightstation sea-surface temperature data used here, as well as
-    sea-surface salinity data, can be found on
-    <a href="https://open.canada.ca/data/en/dataset/719955f2-bf8e-44f7-bc26-6bd623e82884">Open Data</a>.
+    The BC lightstation SST data used here, as well as sea-surface salinity data, can be found on
+    <a href="https://open.canada.ca/data/en/dataset/719955f2-bf8e-44f7-bc26-6bd623e82884">Open Data</a>
+    (note: Open Data will soon be migrating to Enterprise Data Hub).
     More information on the history of the program and on the sampling method can be found on Open Data
     and in Cummins & Masson (2014).
 </p>
 <details>
   <summary>Click here to view map</summary>
-  <img src="./figures/current/lightstation_map.png" class="map" loading="lazy">
+  <img src="./figures/lightstation_map.png" class="map" loading="lazy">
   <p>
       Map of the locations of the eight British Columbia lightstations featured on this page.
   </p>
 </details>
 <h2>Monthly Averaged Data</h2>
 <h3>SST Climatology</h3>
-<img src="./figures/current/bc_lightstation_monthly_mean_climatologies_1991-2020.png" height="400px" loading="lazy">
+<img src="./figures/bc_lightstation_monthly_mean_climatologies_1991-2020.png" height="400px" loading="lazy">
 <p>
     30-year climatologies of sea-surface temperature for 1991-2020, calculated from monthly mean observations.
 </p>
 <h3>Anomaly Time Series</h3>
 <div class="grouped-plots">
     <div class="column">
-        <img src="./figures/current/Amphitrite_Point_monthly_mean_sst_anomalies_theilsen.png" height="200px">
+        <img src="./figures/Amphitrite_Point_monthly_mean_sst_anomalies_ols.png" height="200px">
     </div>
     <div class="column">
-        <img src="./figures/current/Bonilla_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px">
+        <img src="./figures/Bonilla_Island_monthly_mean_sst_anomalies_ols.png" height="200px">
     </div>
 </div>
 <div class="grouped-plots">
-    <div class="image"> <img src="./figures/current/Chrome_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
-    <div class="image"> <img src="./figures/current/Entrance_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/Chrome_Island_monthly_mean_sst_anomalies_ols.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/current/Entrance_Island_monthly_mean_sst_anomalies_ols.png" height="200px"/> </div>
 </div>
 <div class="grouped-plots">
-    <div class="image"> <img src="./figures/current/Kains_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
-    <div class="image"> <img src="./figures/current/Langara_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/Kains_Island_monthly_mean_sst_anomalies_ols.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/current/Langara_Island_monthly_mean_sst_anomalies_ols.png" height="200px"/> </div>
 </div>
 <div class="grouped-plots">
-    <div class="image"> <img src="./figures/current/Pine_Island_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
-    <div class="image"> <img src="./figures/current/Race_Rocks_monthly_mean_sst_anomalies_theilsen.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/Pine_Island_monthly_mean_sst_anomalies_ols.png" height="200px"/> </div>
+    <div class="image"> <img src="./figures/Race_Rocks_monthly_mean_sst_anomalies_ols.png" height="200px"/> </div>
 </div>
 <p>
     Monthly mean anomalies computed from monthly mean observations by subtracting the
@@ -70,30 +73,31 @@
 </p>
 <h3>Comparison of Trends</h3>
 <p>
-    Table of lighthouse stations and their analysis period and least-squares
-    fitted linear SST trend. New results are listed after the results of Cummins & Masson
-    (2014) for comparison. Confidence intervals were computed using the Monte Carlo
+    Table of lighthouse stations and their analysis periods and linear SST trends.
+    Both least-squares and Theil-Sen trends are given.
+    New results are listed after the results of Cummins & Masson
+    (2014) for comparison. 95% confidence intervals were computed using the Monte Carlo
     approach described by Cummins & Masson (2014).
 </p>
-<img src="./figures/current/monte_carlo_max_siml50000_st_cummins_cm2014.png" height="250px" loading="lazy">
+<img src="./figures/monte_carlo_max_siml50000_ols_st_cummins_cm2014.png" height="250px" loading="lazy">
 <h3>Notes</h3>
 <ul>
     <li>The monthly SST anomalies in Cummins & Masson (2014) were computed by
         subtracting the climatological monthly mean based on the 30 year period
-        1981-2010. The monthly SST anomalies computed here were derived from the
+        1981-2010. The monthly SST anomalies computed here are relative to the
         1991-2020 climatological monthly mean.</li>
     <li>Any one-month gaps were filled with spline interpolation to get continuous
         records.</li>
     <li>For the Langara Island record, the analysis period for the 95% confidence
         interval starts in Mar. 1940 to avoid the 30-month data gap (Sept. 1937 -
         Feb. 1940) near the beginning of the record. The least-squares trend for
-        the abridged record is 0.88 &deg;C/century compared with 0.86 &deg;C/century
+        the abridged record is 0.88 &deg;C/century compared with 0.83 &deg;C/century
         for the entire record.</li>
     <li>For the Entrance Island record, the analysis period
         for the 95% confidence interval is limited to May 1936 - Dec. 2019 to avoid
         interpolating over the extended data gaps occurring near the end of the
-        record.  The least-squares trend for the abridged record is 1.28
-        &deg;C/century compared with 1.29 &deg;C/century for the entire record.</li>
+        record.  The least-squares trend for the abridged record is 1.34
+        &deg;C/century compared with 1.28 &deg;C/century for the entire record.</li>
 </ul>
 <h2>References</h2>
 <p>

@@ -100,7 +100,14 @@ def plot_lighthouse_t(anom_file: str, station_name: str, subplot_letter: str, pl
         # Assume it's the path to a file
         regr_results = pd.read_csv(best_fit)
         mask = [station_name.split(" ")[0] in nm for nm in regr_results.iloc[:, 0]]
-        slope, y_int = float(regr_results.iloc[mask, 1]), float(regr_results.iloc[mask, 3])
+        if sum(mask) == 0:
+            print('station_name,', station_name, ', does not match any in',
+                  best_fit)
+            return
+        # Get least-squares trend from entire record
+        slope = float(regr_results.iloc[mask, 1])
+        # Get least-squares y-intercept from entire record
+        y_int = float(regr_results.iloc[mask, 5])
         # Plot the line
         x_linspace = np.linspace(date_flat[0], date_flat[-1], 100)
         y_hat_linspace = slope/100 * x_linspace + y_int  # Slope in per 100 years?
@@ -140,11 +147,13 @@ def get_record_st_en(df: pd.DataFrame):
     return st_mth, st_yr, en_mth, en_yr
 
 
-def trend_table_image():
+def multi_trend_table_image():
     """
     Save the table of analysis periods, trends, and confidence intervals as an image.
+    ***Include both OLS and Theil-Sen trends.
     Include the Cummins & Masson (2014) data for comparison.
-    Code requires and assumes that stations are only listed in alphabetical order everywhere
+    Code requires and assumes that stations are only listed in alphabetical order
+    everywhere
     :return:
     """
     old_dir = os.getcwd()
@@ -152,7 +161,110 @@ def trend_table_image():
     os.chdir(new_dir)
 
     analysis_dir = os.path.join(new_dir, 'analysis')
-    figures_dir = os.path.join(new_dir, 'figures', 'current')
+    figures_dir = os.path.join(new_dir, 'figures')
+    data_dir = os.path.join(new_dir, 'data')
+
+    # Get file containing new trends
+    new_trend_file = './analysis/monte_carlo_max_siml50000_ols_st_cummins.csv'
+    df_new_trend = pd.read_csv(new_trend_file)
+
+    cm2014_file = './analysis/cummins_masson_2014_trends.csv'
+    cm2014_df = pd.read_csv(cm2014_file)
+
+    # Make a dataframe to print to an image containing the analysis period
+    # and the trends and confidence intervals for each station
+    df_img = cm2014_df
+
+    # Add a second level header in the dataframe
+    old_header = df_img.columns.tolist()
+    # print(old_header)
+    new_header = [[' ', 'C&M (2014)', 'C&M (2014)'],
+                  old_header]
+    df_img.columns = new_header
+
+    # Initialize columns for containing the updated results
+    df_img[('New', 'Analysis period')] = np.repeat('', len(df_img))
+    df_img[('New', 'Least-squares (Theil-Sen) trend in C/century')] = np.repeat(
+        '', len(df_img))
+
+    # Get the raw data in csv format
+    raw_files = glob.glob(data_dir + '/*MonthlyTemp.csv')
+    if len(raw_files) == 0:
+        print('No monthly temperature data files found; try a different search key')
+        return
+    raw_files.sort()
+
+    # Iterate through all the files
+    for i in range(len(raw_files)):
+        df_in = pd.read_csv(raw_files[i], index_col='Year',
+                            na_values=[99.99, 999.9, 999.99])
+
+        # Get the start and end month and year of analysis period
+        # with the end including the very last record, different than nans_to_strip() function
+        st_mth, st_yr, en_mth, en_yr = get_record_st_en(df_in)
+
+        # Both for deg C/century
+        ols_trend_i = np.round(
+            df_new_trend.loc[i, 'Least-squares entire trend [deg C/century]'],
+            decimals=2
+        )
+        sen_trend_i = np.round(
+            df_new_trend.loc[i, 'Theil-Sen entire trend [deg C/century]'],
+            decimals=2
+        )
+        conf_int_i = np.round(
+            df_new_trend.loc[i, 'Monte Carlo confidence limit [deg C/century]'],
+            decimals=2
+        )
+
+        # Update the dataframe to be exported as an image
+        # Pandas multi-index: http://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html
+        # Use table
+        df_img.loc[i, ('New', 'Analysis period')] = f'{st_mth} {st_yr} - {en_mth} {en_yr}'
+        df_img.loc[
+            i, ('New', 'Least-squares (Theil-Sen) trend in C/century')
+        ] = '{:.2f} ({:.2f}) +/- {:.2f}'.format(ols_trend_i, sen_trend_i, conf_int_i)
+
+    # Update the index
+    df_img.rename_axis(index='Station')
+    df_img.set_index(keys=[df_img.loc[:, (' ', 'Station')].values],
+                     inplace=True)
+    df_img.drop(columns=(' ', 'Station'), inplace=True)
+
+    # Name for files
+    df_img_name = os.path.join(
+        figures_dir,
+        os.path.basename(new_trend_file).replace('.csv', '_cm2014.png')
+    )
+
+    # Export the table in PNG format
+    dfi.export(df_img, os.path.join(figures_dir, df_img_name))
+
+    # Export the table in csv format first
+    df_img.to_csv(
+        os.path.join(analysis_dir, os.path.basename(df_img_name).replace('png', 'csv')),
+        index=True
+    )
+
+    # Change the current directory back
+    os.chdir(old_dir)
+    return
+
+
+def trend_table_image():
+    """
+    Save the table of analysis periods, trends, and confidence intervals as an image.
+    Include the Cummins & Masson (2014) data for comparison.
+    Code requires and assumes that stations are only listed in alphabetical order
+    everywhere
+    :return:
+    """
+    old_dir = os.getcwd()
+    new_dir = os.path.dirname(old_dir)
+    os.chdir(new_dir)
+
+    analysis_dir = os.path.join(new_dir, 'analysis')
+    figures_dir = os.path.join(new_dir, 'figures')
     data_dir = os.path.join(new_dir, 'data')
 
     # Get file containing new trends
@@ -434,6 +546,50 @@ def sst_all_time_mean(monthly_mean_file):
     return np.round(all_time_mean, 2) if all_time_mean < 10 else np.round(all_time_mean, 1)
 
 
+def main(
+        plot_t_anom: bool = False,
+        plot_clim: bool = False,
+        plot_filled_sst: bool = False
+):
+    old_dir = os.getcwd()
+    new_dir = os.path.dirname(old_dir)
+    os.chdir(new_dir)
+
+    station_names = [
+        "Amphitrite Point", "Bonilla Island", "Chrome Island",
+        "Entrance Island", "Kains Island",
+        "Langara Island", "Pine Island", "Race Rocks"
+    ]
+
+    # Plot climatological monthly means at each station
+    output_folder = os.path.join(new_dir, 'figures')
+
+    input_folder = os.path.join(new_dir, 'analysis')
+
+    anom_files = glob.glob(
+        input_folder + '\\*monthly_anom_from_monthly_mean.csv',
+        recursive=False
+    )
+    anom_files.sort()
+
+    # Get trends and confidence intervals file
+    monte_carlo_results = os.path.join(
+        input_folder,
+        "monte_carlo_max_siml50000_ols_st_cummins.csv"
+    )
+
+    if plot_t_anom:
+        subplot_letters = 'abcdefgh'
+
+        for stn, f, letter in zip(station_names, anom_files, subplot_letters):
+            png_filename = os.path.join(
+                output_folder, stn.replace(' ', '_') + '_monthly_mean_sst_anomalies_ols.png'
+            )
+            plot_lighthouse_t(f, stn, letter, png_filename, best_fit=monte_carlo_results)
+
+    return
+
+
 """
 parent_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\' \
              'our_warming_ocean\\lighthouse_data\\'
@@ -481,33 +637,6 @@ plot_dir = os.path.dirname(lighthouse_clim)
 
 plot_climatology(lighthouse_clim, plot_dir)
 """
-
-station_names = [
-    "Amphitrite Point", "Bonilla Island", "Chrome Island", "Entrance Island", "Kains Island",
-    "Langara Island", "Pine Island", "Race Rocks"
-]
-subplot_letters = 'abcdefgh'
-
-# Plot climatological monthly means at each station
-parent_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\' \
-             'our_warming_ocean\\lighthouse_data\\update_20230706\\'
-
-output_folder = os.path.join(parent_dir, 'monthly_anom_from_monthly_mean', 'monte_carlo')
-
-anom_files = glob.glob(parent_dir + 'monthly_anom_from_monthly_mean\\*.csv',
-                       recursive=False)
-anom_files.sort()
-
-monte_carlo_results = os.path.join(
-    parent_dir, "monthly_anom_from_monthly_mean",
-    "monte_carlo", "monte_carlo_max_siml50000_st_cummins.csv"
-)
-
-for stn, f, letter in zip(station_names, anom_files, subplot_letters):
-    png_filename = os.path.join(
-        output_folder, stn.replace(' ', '_') + '_monthly_mean_sst_anomalies_theilsen.png'
-    )
-    plot_lighthouse_t(f, stn, letter, png_filename, best_fit=monte_carlo_results)
 
 """
 # Plot lighthouse temperature anomalies with linear trendline
