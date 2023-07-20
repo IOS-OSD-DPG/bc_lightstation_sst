@@ -10,7 +10,6 @@ from statsmodels.tsa.stattools import acovf
 from scipy.interpolate import interp1d
 import os
 from tqdm import trange
-
 from patsy import dmatrices
 import statsmodels.api as sm
 from scipy.stats import t
@@ -127,7 +126,7 @@ def std_dev_x(x):
     """
     N = len(x)
     x_bar = np.mean(x)
-    s_x = (1 / (N - 1) * sum((x - x_bar) ** 2)) ** (1/2)
+    s_x = (1 / (N - 1) * sum((x - x_bar) ** 2)) ** (1 / 2)
 
     return s_x
 
@@ -150,32 +149,54 @@ def conf_limit(s_eta, N_star, s_x):
     return (s_eta * t.ppf(1 - alpha / 2, df=deg_freedom)) / ((N_star - 1) ** .5 * s_x)
 
 
-def nans_to_strip(N: int):
-    """From Patrick Cummins Matlab script"""
+def nans_to_strip(abridged: bool):
+    """
+    From Patrick Cummins Matlab script.
+
+    Store the numbers of observations to strip from the beginning and end
+    of each lightstation record.
+
+    The entire record is needed for trend calculations. The abridged
+    record is needed for CI calculations.
+
+    These numbers will need to be updated each time the plots are updated
+    and if the list of stations being analyzed changes!
+    """
+    # Number of stations being analyzed
+    N = 8
     nstrip = np.zeros((N, 2), dtype=int)
-    nstrip[0, :] = [7, 8]  # Amphitrite
-    nstrip[1, :] = [3, 8]  # Bonilla
-    nstrip[2, :] = [3, 8]  # Chrome
-    nstrip[3, :] = [4, 36]  # Entrance
-    nstrip[4, :] = [0, 8]  # Kains
-    nstrip[5, :] = [50, 9]  # Langara
-    nstrip[6, :] = [0, 8]  # Pine
-    nstrip[7, :] = [1, 8]  # Race Rocks
+    nstrip[0, :] = [7, 9]  # Amphitrite  ,8
+    nstrip[1, :] = [3, 9]  # Bonilla ,8
+    nstrip[2, :] = [3, 2]  # Chrome ,8, doesn't have 2023 data yet
+    nstrip[3, :] = [4, 48]  # Entrance to Dec 2019
+    nstrip[4, :] = [0, 9]  # Kains
+    nstrip[5, :] = [50, 9]  # Langara starting Mar 1940
+    nstrip[6, :] = [0, 9]  # Pine ,8
+    nstrip[7, :] = [1, 9]  # Race Rocks  ,8
+
+    if not abridged:
+        nstrip[3, :] = [4, 9]  # Entrance to Mar 2023
+        nstrip[5, :] = [9, 9]  # Langara starting Oct 1936
     return nstrip
 
 
 def treat_nans(x: np.ndarray, y: np.ndarray, nstart: int, nend: int):
-    """From Patrick Cummins Matlab script"""
-    # Remove leading and trailing nans
+    """
+    From Patrick Cummins Matlab script
+    Use first-order spline interpolation to fill gaps in lightstation SST data
+    """
+    # Remove leading and trailing nans that were identified in the nans_to_strip() step
     xx = x[nstart:-nend]
     yy = y[nstart:-nend]
     # fill gaps with spline interpolation here as well as in Patrick's method??
     xx_with_gaps = xx[pd.notna(yy)]
     yy_with_gaps = yy[pd.notna(yy)]
     # First-order spline interpolation function
+    xx_filled = xx
     spline_fn = interp1d(xx_with_gaps, yy_with_gaps, kind='slinear')
-    yy_filled = spline_fn(xx)
-    return xx, yy_filled
+    yy_filled = spline_fn(xx_filled)
+
+    return xx_filled, yy_filled
 
 
 def main_te(compute_cis=False, delta_tau_factor=1, nlag_vals_to_use=50):
@@ -193,7 +214,7 @@ def main_te(compute_cis=False, delta_tau_factor=1, nlag_vals_to_use=50):
     file_list = glob.glob(parent_dir + '*monthly_anom_from_monthly_mean.csv')
     file_list.sort()
     # Number of leading and trailing nans to discard
-    nstrip = nans_to_strip(len(file_list))
+    nstrip = nans_to_strip(abridged=True)
 
     data_file = parent_dir + 'Amphitrite_Point_monthly_anom_from_monthly_mean.csv'
     # Initialize dataframe to hold results
@@ -218,8 +239,8 @@ def main_te(compute_cis=False, delta_tau_factor=1, nlag_vals_to_use=50):
         # Reformat dataframe into 1d with float type date
         x, y = flatten_dframe(dframe)
 
-        xx, yy_filled = treat_nans(x, y, nstrip[data_file_idx, 0],
-                                   nstrip[data_file_idx, 1])
+        xx_gaps, yy_gaps, xx, yy_filled = treat_nans(x, y, nstrip[data_file_idx, 0],
+                                                     nstrip[data_file_idx, 1])
 
         # Set up parameters for analysis
         NN = len(yy_filled)
@@ -254,7 +275,7 @@ def main_te(compute_cis=False, delta_tau_factor=1, nlag_vals_to_use=50):
             print('The confidence interval on the least-squares slope is:',
                   CI_effective)
             CI_original = (res.conf_int(alpha=0.05).iloc[1, 1] -
-                           res.conf_int(alpha=0.05).iloc[1, 0])/2
+                           res.conf_int(alpha=0.05).iloc[1, 0]) / 2
             df_res.loc[station_name] = [NN, NN - 2, N_star, res.params[1] * 100,
                                         CI_original * 100, CI_effective * 100]
         else:
@@ -277,7 +298,7 @@ def main_ols():
     file_list = glob.glob(parent_dir + '*monthly_anom_from_monthly_mean.csv')
     file_list.sort()
     # Number of leading and trailing nans to discard
-    nstrip = nans_to_strip(len(file_list))
+    nstrip = nans_to_strip(abridged=True)
     # data_file = parent_dir + 'Amphitrite_Point_monthly_anom_from_monthly_mean.csv',
     # Initialize dataframe to hold results
     df_res = pd.DataFrame(columns=['Start date', 'End date', 'Number of observations',
@@ -322,7 +343,8 @@ def main_ols():
 
         df_res.loc[station_name] = [
             min(xx), max(xx), len(xx), res.df_resid, res.params.Date * 100,
-            (res.conf_int().loc['Date', 1] - res.conf_int().loc['Date', 0])/2 * 100]
+                                                     (res.conf_int().loc['Date', 1] - res.conf_int().loc[
+                                                         'Date', 0]) / 2 * 100]
 
     # Export results
     results_filename = os.path.join(
@@ -335,9 +357,14 @@ def main_ols():
 # Patrick's method
 
 
-def TheilSen_Cummins(data):
+def TheilSen_Cummins(data: np.ndarray):
     """
-    Patrick Cummins' Theil-Sen regression code, translated from Matlab
+    Patrick Cummins' Theil-Sen regression code, translated from Matlab.
+    Source:
+    Gilbert, Richard O. (1987), "6.5 Sen's Nonparametric Estimator of
+    Slope", Statistical Methods for Environmental Pollution Monitoring,
+    John Wiley and Sons, pp. 217-219, ISBN 978-0-471-28878-7
+
     :param data: A MxD matrix with M observations. The first D-1 columns
     are the explanatory variables and the Dth column is the response such that
     data = [x1, x2, ..., x(D-1), y]
@@ -351,14 +378,16 @@ def TheilSen_Cummins(data):
         print('Expecting MxD data matrix with at least 2 observations.')
         return
 
-    if sz[1] == 2:
+    if sz[1] == 2:  # Normal 2-D case
         # X = NaN(n) returns an n-by-n matrix of NaN values in matlab
         CC = np.repeat(np.nan, (sz[0] * sz[0])).reshape((sz[0], sz[0]))
+        # Accumulate slopes
         for i in range(sz[0]):
             CC[i, i:] = (data[i, 1] - data[i:, 1]) / (data[i, 0] - data[i:, 0])
 
+        # Make mask for finite values (nan not finite)
         k = np.isfinite(CC)
-        m = np.median(CC[k])  # Slope estimate
+        m = np.median(CC[k])  # Slope estimate: take median of finite slopes
 
         kd = np.isfinite(data[:, 0])
         # calculate intercept if requested
@@ -367,10 +396,22 @@ def TheilSen_Cummins(data):
         return m, bb, CC
 
 
-def monte_carlo_trend(max_siml, maxlag, time, data_record, ncores_to_use=None, sen_flag=0):
+def monte_carlo_trend(max_siml: int, maxlag, time, data_record: np.ndarray, ncores_to_use=None,
+                      sen_flag=0):
     """
     Trend analysis via Monte Carlo simulations. Code translated from Patrick Cummins'
     Matlab code. See Cummins & Masson (2014) and Cummins & Ross (2020).
+
+    Starting with a given sample time series, a set of random time series
+    is generated such that the mean auto-correlation function of these time series
+    is the same as that of the original record. The program returns the linear trend of each of these
+    random time series (siml_trends) along with the mean and standard deviation of the
+    acvf of the random time series, as well as the mean power spectrum.
+    Trends are in the same units as the input data.
+
+    Program assumes that the input data time series (time, data_record) has zero mean
+    and is free of gaps
+
 
     Theil-Sen regression references:
     Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830,
@@ -407,17 +448,20 @@ def monte_carlo_trend(max_siml, maxlag, time, data_record, ncores_to_use=None, s
     # data_mag = abs(fft(yy_filled))
     data_mag = abs(fft(data_record))
 
+    # Initialize array for mean power spectrum
     mean_spec = np.zeros(npts)
 
+    # Iterate through the simulations and display a progress bar
     for nsim in trange(max_siml):
-        # Set the seed
+        # Set the seed so that results can be reproduced, unlike the matlab code which shuffles the seed
         np.random.seed(42 + nsim)
 
         # Generate a 1-by-npts (1, npts) row vector of uniformly distributed
-        # numbers in the interval [-2pi, 2pi)?
+        # numbers in the interval [-2pi, 2pi)
         ph_ang = 2 * np.pi * np.random.random_sample(npts)
+
         # Should this be 1d or 2d from matrix multiplication?
-        dummy_fft = data_mag * np.exp(1j * ph_ang)  # imaginary number
+        dummy_fft = data_mag * np.exp(1j * ph_ang)  # 1i imaginary number in matlab
 
         # Take inverse fft to obtain simulated time series
         dummy_ts = np.sqrt(2) * np.real(ifft(dummy_fft))
@@ -439,7 +483,8 @@ def monte_carlo_trend(max_siml, maxlag, time, data_record, ncores_to_use=None, s
                 print('Warning: fit has more than 1 coefficient:', res.coef_)
                 return
         elif sen_flag == 2:
-            # Use patrick's function
+            # Use Patrick's function
+            # m, bb, CC = TheilSen_Cummins()
             siml_trends[nsim] = TheilSen_Cummins(np.array([time, dummy_ts]).T)[0]
         else:
             # Ordinary least-squares linear regression
@@ -472,7 +517,7 @@ def monte_carlo_trend(max_siml, maxlag, time, data_record, ncores_to_use=None, s
     return siml_trends, mean_acvf, std_acvf, mean_spec  # ,lags
 
 
-def lstq_model(anom_1d, date_numeric_1d):
+def ols_model(anom_1d: np.ndarray, date_numeric_1d: np.ndarray):
     # https://www.statsmodels.org/stable/gettingstarted.html
 
     # Do not include nan values in the dataframe for the model
@@ -492,36 +537,50 @@ def lstq_model(anom_1d, date_numeric_1d):
     return res
 
 
-def calc_trend(max_siml=None, ncores_to_use=None, sen_flag=0):
+def calc_trend(search_string: str, max_siml=None, ncores_to_use=None,
+               sen_flag: int = 0):
     """
-
+    Calculate the trend using least squares and Theil-Sen regression
+    and calculate the 95% confidence interval using the *max_siml* number of simulations
+    :param search_string: string to use with glob to find the anomaly data files, i.e.,
+        "monthly_anom_from_monthly_mean.csv", so all lightstation files would end with that
+        string
     :param max_siml: maximum number of simulations to do
     :param ncores_to_use: number of cores for sen_flag=1 option processing with scikit-learn
-    :param sen_flag: 0-least-squares, 1-scikit-learn Theil-Sen, 2-Patrick Theil-Sen
+    :param sen_flag: 0 (least-squares and Patrick Theil-Sen), 1 (least-squares and scikit-learn Theil-Sen)
     :return:
     """
-    parent_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\our_warming_ocean\\' \
-                 'lighthouse_data\\monthly_anom_from_monthly_mean\\'
-    file_list = glob.glob(parent_dir + '*monthly_anom_from_monthly_mean.csv')
-    file_list.sort()
-    # Number of leading and trailing nans to discard
-    nstrip = nans_to_strip(8)  # len(file_list)
+    # Search for the data files in the project directory
+    old_dir = os.getcwd()
+    new_dir = os.path.dirname(old_dir)
+    os.chdir(new_dir)
+    analysis_dir = os.path.join(new_dir, 'analysis')
 
-    # Parameters
-    max_siml = 500 if max_siml is None else max_siml  # 50000  # test with a smaller faster number
-    maxlag = 50
+    file_list = glob.glob(analysis_dir + f'\\*{search_string}')
+    if len(file_list) == 0:
+        print('Did not locate any files in', analysis_dir, 'with suffix', search_string)
+        return
+    file_list.sort()
+
+    # Number of leading and trailing nans to discard
+    # abridged: Langara and Entrance Island
+    nstrip_abridged = nans_to_strip(abridged=True)  # len(file_list)
+    # nstrip_entire = nans_to_strip(abridged=False)
 
     # # Testing
     # data_file = parent_dir + 'Amphitrite_Point_monthly_anom_from_monthly_mean.csv'
     # data_file_idx = 0
 
     # Initialize outputs dataframe
-    if sen_flag >= 1:
-        df_res = pd.DataFrame(columns=['Theil-Sen slope [deg C/century]',
-                                       'Monte Carlo confidence limit [deg C/century]'])
-    else:
-        df_res = pd.DataFrame(columns=['Least-squares slope [deg C/century]',
-                                       'Monte Carlo confidence limit [deg C/century]'])
+    df_res = pd.DataFrame(columns=['Least-squares entire trend [deg C/century]',
+                                   'Least-squares abridged trend [deg C/century]',
+                                   'Theil-Sen entire trend [deg C/century]',
+                                   'Monte Carlo confidence limit [deg C/century]',
+                                   'Least-squares y-intercept'])
+
+    # Monte Carlo parameters
+    max_siml = 500 if max_siml is None else max_siml  # 50000  # test with a smaller faster number
+    maxlag = 50
 
     # Iterate through each lighthouse station
     for i in range(len(file_list)):
@@ -534,6 +593,49 @@ def calc_trend(max_siml=None, ncores_to_use=None, sen_flag=0):
         # Reformat dataframe into 1d with float type date
         x, y = flatten_dframe(dframe)
 
+        # Get series without nans but keeping data gaps
+        x_gaps = x[pd.notna(y)]
+        y_gaps = y[pd.notna(y)]
+
+        # Compute trends using the abridged and entire records (Langara and Entrance)
+        # WITHOUT filling gaps with interpolation or otherwise
+
+        # Ordinary least-squares linear regression on entire record with gaps
+        # Do not include nan values in the dataframe for the model
+        res_ols_entire = ols_model(y_gaps, x_gaps)
+        trend_century_ols_entire = res_ols_entire.params.Date * 100
+
+        # y-intercept for OLS on entire record with gaps
+        y_intercept_ols = res_ols_entire.params.Intercept
+        # # Could also take the upper confidence limit assuming they're the same size
+        # ci_century_ols = np.mean(abs(res.fittedvalues - res.conf_int().loc['Date', 0]))
+
+        # Compute the trends on the gappy abridged records
+        nstrip_0, nstrip_1 = [nstrip_abridged[data_file_idx, 0], nstrip_abridged[data_file_idx, 1]]
+
+        x_gaps_abridged = x[nstrip_0:-nstrip_1][pd.notna(y[nstrip_0:-nstrip_1])]
+        y_gaps_abridged = y[nstrip_0:-nstrip_1][pd.notna(y[nstrip_0:-nstrip_1])]
+
+        res_ols_abridged = ols_model(y_gaps_abridged, x_gaps_abridged)
+        trend_century_ols_abridged = res_ols_abridged.params.Date * 100
+
+        # Compute the Theil-Sen trends on the gappy entire records
+        if sen_flag == 1:
+            # Use the scikit-learn Theil-Sen regression algorithm
+            res_sen = TheilSenRegressor(fit_intercept=True, random_state=42).fit(
+                x_gaps[:, np.newaxis], y_gaps)
+            # Convert values from deg C/year to deg C/century
+            trend_century_sen = res_sen.coef_[0] * 100
+            # # Get y-intercept
+            # y_intercept_sen = res_sen.intercept_
+        else:
+            # Use Patrick's Theil-Sen code (preferred)
+            # Returns m, b, C, where b is the y-intercept
+            trend_yearly = TheilSen_Cummins(np.array([x_gaps, y_gaps]).T)[0]
+            trend_century_sen = trend_yearly * 100
+
+        # ----------------------confidence interval------------------------
+
         # # Form time series with nan entries removed and retaining data gaps
         # notna_ind = pd.notna(y)
         # temp_anomaly_gaps = y[notna_ind]
@@ -545,30 +647,33 @@ def calc_trend(max_siml=None, ncores_to_use=None, sen_flag=0):
 
         # Strip away NaN entries at beginning and end of records to avoid extrapolation
         # Use spline interpolation to fill data gaps
-        xx, yy_filled = treat_nans(x, y, nstrip[data_file_idx, 0],
-                                   nstrip[data_file_idx, 1])
+        spline_fn = interp1d(x_gaps_abridged, y_gaps_abridged, kind='slinear')
+        x_filled_abridged = x[nstrip_0:-nstrip_1]
+        y_filled_abridged = spline_fn(x_filled_abridged)
 
         # Check the least-squares trend of the filled time series
-        lstq_res = lstq_model(yy_filled, xx)
+        # Get results
+        lstq_res = ols_model(y_filled_abridged, x_filled_abridged)
         ls_trend_line = lstq_res.fittedvalues.to_numpy()
         # Detrend the anomalies
-        temp_anomaly_detrend = yy_filled - ls_trend_line
+        temp_anomaly_detrend = y_filled_abridged - ls_trend_line
 
-        # Monte Carlo simulations
+        # Monte Carlo simulations to get items to compute 95% confidence interval
         siml_trends, mean_acvf, std_acvf, mean_spec = monte_carlo_trend(
-            max_siml, maxlag, xx, temp_anomaly_detrend, ncores_to_use=ncores_to_use,
-            sen_flag=sen_flag)
+            max_siml, maxlag, x_filled_abridged, temp_anomaly_detrend,
+            ncores_to_use=ncores_to_use, sen_flag=sen_flag)
 
         # Calculate statistics of siml_trends
         # nbins = 100 if max_siml == 50000 else 5
-        nbins = 100 if max_siml >= 500 else 5
+        nbins = 100 if max_siml >= 500 else 10
         # density=True -> the result is the value of the
         # probability *density* function at the bin, normalized such that
         # the *integral* over the range is 1
         # N is an array containing the count in each bin
-        # Want to bin the data using the cumulative density function (cdf) estimate todo
-        count, bin_edges = np.histogram(siml_trends, bins=nbins)  #, density=True)
+        # Want to bin the data using the cumulative density function (cdf) estimate
+        count, bin_edges = np.histogram(siml_trends, bins=nbins)  # , density=True)
         N_input = sum(count)
+        # Initialize container for CDF values
         N = np.zeros(nbins)
         for k in range(nbins):
             N[k] = sum(count[:k] / N_input)
@@ -578,69 +683,35 @@ def calc_trend(max_siml=None, ncores_to_use=None, sen_flag=0):
         # Establish confidence intervals
         alim_low = 0.025  # for 95 % confidence interval
         alim_high = 0.975
-        for n in range(nbins-1):
+        for n in range(nbins - 1):
             if N[n] < alim_low <= N[n + 1]:
-                temp_conf_int_low = 0.5 * (bin_edges[n] + bin_edges[n+1])
+                temp_conf_int_low = 0.5 * (bin_edges[n] + bin_edges[n + 1])
             if N[n] <= alim_high < N[n + 1]:
-                temp_conf_int_high = 0.5 * (bin_edges[n] + bin_edges[n+1])
+                temp_conf_int_high = 0.5 * (bin_edges[n] + bin_edges[n + 1])
 
         temp_conf_int_95 = 0.5 * (-temp_conf_int_low + temp_conf_int_high)
+        conf_int_century = temp_conf_int_95 * 100  # Convert from deg C/year to deg C/century
 
-        # Save confidence interval to dataframe
-        if sen_flag == 1:
-            res = TheilSenRegressor(fit_intercept=True, random_state=42).fit(
-                xx[:, np.newaxis], yy_filled)
-            # Convert values from deg C/year to deg C/century
-            trend_century, ci_century = [res.coef_[0] * 100, temp_conf_int_95 * 100]
-        elif sen_flag == 2:
-            # Returns m, b, C
-            trend_century = TheilSen_Cummins(np.array([xx, yy_filled]).T)[0] * 100
-            ci_century = temp_conf_int_95 * 100
-        else:
-            # Ordinary least-squares linear regression
-            # Do not include nan values in the dataframe for the model
-            res = lstq_model(yy_filled, xx)
-            trend_century = res.params.Date * 100
-            # Could also take the upper confidence limit assuming they're the same size
-            ci_century = np.mean(abs(res.fittedvalues - res.conf_int().loc['Date', 0]))
+        df_res.loc[station_name] = [trend_century_ols_entire, trend_century_ols_abridged,
+                                    trend_century_sen, conf_int_century, y_intercept_ols]
 
-        df_res.loc[station_name] = [trend_century, ci_century]
-        print('Trend and 95% CI are', trend_century, 'and', ci_century, 'deg. C/century')
+        print('OLS trend (entire record):', trend_century_ols_entire)
+        print('OLS trend (abridged record):', trend_century_ols_abridged)
+        print('Theil-Sen trend (entire record):', trend_century_sen)
+        print('Monte Carlo 95% Conf int (abridged record):', conf_int_century)
+        print('OLS y-intercept (entire record):', y_intercept_ols)
 
+    # Save the regression output to a csv file, named accordingly
     if sen_flag == 1:
         regression_type = 'st'  # Theil-Sen
-    elif sen_flag == 2:
-        regression_type = 'st_cummins'
     else:
-        regression_type = 'ls'  # Least-squares
-    df_res.to_csv(os.path.join(parent_dir, 'monte_carlo',
-                               'monte_carlo_max_siml{}_{}.csv'.format(
-                                   max_siml, regression_type)))
+        regression_type = 'st_cummins'
+
+    # Save to the repo directory eventually
+    # Export the results to a CSV file
+    df_res.to_csv('./analysis/monte_carlo_max_siml{}_ols_{}.csv'.format(max_siml, regression_type))
+
+    # Change current dir back
+    os.chdir(old_dir)
+
     return
-
-
-# ------------------------------------------------------------------------
-
-# # Patrick
-# calc_trend(max_siml=50000, ncores_to_use=None, sen_flag=0)
-# calc_trend(max_siml=50000, ncores_to_use=None, sen_flag=2)
-
-"""
-# Testing
-# x = np.random.random_sample(1000)
-xx = np.random.normal(size=1000)
-num_bins = 25
-counts, edges = np.histogram(xx, num_bins)
-cdf = np.zeros(num_bins)
-for b in range(num_bins):
-    cdf[b] = sum(counts[:b]/len(xx))
-
-plt.bar(x=np.arange(num_bins), height=cdf)
-
-plt.hist(xx, num_bins)
-
-
-# test
-test_data = np.array([xx, yy_filled]).T
-[m, b, C] = TheilSen_Cummins(test_data)
-"""
