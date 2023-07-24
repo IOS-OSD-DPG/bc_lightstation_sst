@@ -6,6 +6,13 @@ import numpy as np
 from patsy import dmatrices
 from statsmodels.api import OLS
 import dataframe_image as dfi
+from scripts.trend_estimation import flatten_dframe
+
+STATION_NAMES = [
+    "Amphitrite Point", "Bonilla Island", "Chrome Island",
+    "Entrance Island", "Kains Island",
+    "Langara Island", "Pine Island", "Race Rocks"
+]
 
 
 def lstq_model(anom_1d, date_numeric_1d):
@@ -110,7 +117,7 @@ def plot_lighthouse_t(anom_file: str, station_name: str, subplot_letter: str, pl
         y_int = float(regr_results.iloc[mask, 5])
         # Plot the line
         x_linspace = np.linspace(date_flat[0], date_flat[-1], 100)
-        y_hat_linspace = slope/100 * x_linspace + y_int  # Slope in per 100 years?
+        y_hat_linspace = slope / 100 * x_linspace + y_int  # Slope in per 100 years?
         ax.plot(x_linspace, y_hat_linspace, c='k')
 
     # Plot formatting
@@ -132,6 +139,126 @@ def plot_lighthouse_t(anom_file: str, station_name: str, subplot_letter: str, pl
     plt.tight_layout()
     plt.savefig(plot_name)
     plt.close(fig)
+    return
+
+
+def plot_data_gaps():
+    """
+    Make a bar-like plot showing where there are gaps in each lightstations' record
+    Follow
+    https://matplotlib.org/stable/gallery/lines_bars_and_markers/horizontal_barchart_distribution.html#sphx-glr-gallery-lines-bars-and-markers-horizontal-barchart-distribution-py
+    Make mask of 0s and 1s based on whether there is a measurement
+    Plot both 0s and 1s in the horizontal bar chart and plot the zeros as white so they don't show up
+    :return:
+    """
+    old_dir = os.getcwd()
+    new_dir = os.path.dirname(old_dir)
+    os.chdir(new_dir)
+
+    # Read in the data
+    raw_file_list = glob.glob(new_dir + '\\data\\monthly\\*MonthlyTemp.csv')
+    if len(raw_file_list) == 0:
+        print('Check suffix of raw files; empty file list returned')
+        return
+    raw_file_list.sort(reverse=True)
+
+    min_year, max_year = [1921, 2023]
+
+    # Make the plot
+    fig = plt.figure(figsize=(8, 4))
+    ax = fig.add_subplot()
+
+    for i in range(len(raw_file_list)):
+        df = pd.read_csv(raw_file_list[i], index_col='Year',
+                         na_values=[99.99, 999.9, 999.99])
+        # Flatten the dataframe
+        date, sst = flatten_dframe(df)
+        # Make a mask from the dataframe using ~pd.isna(df)
+        mask = ~pd.isna(sst)
+        sst_here = np.ones(sum(mask)) * (2 * i)
+        # Plot the data with vline marker (square 's' marker too big?)
+        # Change marker opacity with alpha
+        ax.scatter(date[mask], sst_here, marker='|', s=10, color='b')
+        # Label the series with the station name
+        ax.text(x=max_year + 2, y=sst_here[0] - 0.2,
+                s=STATION_NAMES[len(STATION_NAMES) - 1 - i])
+
+    # Style the plot
+    ax.tick_params(axis="x", direction="in", bottom=True, top=True)
+    ax.tick_params(axis="y", direction="in", left=True, right=True)
+    ax.set(yticklabels=[])  # Remove y axis tick labels
+    old_xticks = ax.get_xticks()  # Remove the x ticks below the station names
+    new_xticks = np.arange(old_xticks[0], old_xticks[-2] + 1, 10, dtype=int)
+    ax.set_xticks(new_xticks)
+    ax.set_xticklabels(ax.get_xticks(), rotation=45)
+    ax.set_xlim((min_year - 2, max_year + 25))
+    plt.tight_layout()
+
+    plt.savefig('.\\figures\\lightstation_data_gaps.png')
+    plt.close(fig)
+
+    os.chdir(old_dir)
+    return
+
+
+def plot_daily_filled_anomalies(year: int):
+    """
+    Plot the most recent year's raw data on top of the 1991-2020 climatology
+    for each station
+    :return:
+    """
+    old_dir = os.getcwd()
+    new_dir = os.path.dirname(old_dir)
+    os.chdir(new_dir)
+
+    # Use daily data instead of monthly mean observations
+    daily_file_list = glob.glob(new_dir + '\\data\\daily\\*.txt')
+    if len(daily_file_list) == 0:
+        print('Check suffix of raw files; empty file list returned')
+        return
+    daily_file_list.sort()
+
+    # todo need a smoother curve, how?
+    climatology_file = '.\\analysis\\lighthouse_sst_climatology_1991-2020.csv'
+    # Add numeric index and push the station name index to the first column
+    df_clim = pd.read_csv(climatology_file)
+
+    month_numbers = np.arange(1, 12 + 1, 1)
+    xtick_labels = [abbrev.title() for abbrev in df_clim.columns[1:]]
+
+    days_per_year = 365
+
+    for i in range(len(daily_file_list)):
+        # Read in fixed width file
+        df_obs = pd.read_fwf(daily_file_list[i], na_values=[99.99, 999.9, 999.99])
+
+        # Convert the year-month-day columns into floats
+        df_obs['Datetime'] = pd.to_datetime(df_obs.loc[:, ['Year', 'Month', 'Day']])
+        df_obs['Float_year'] = df_obs['Datetime'].dt.dayofyear / days_per_year + df_obs['Year']
+
+        # Mask of selected year
+        mask_year = [int(y) == year for y in df_obs.loc[:, 'Year']]
+
+        # Plot the climatology
+        fig, ax = plt.subplots()
+        ax.plot(month_numbers, df_clim.loc[i, 1:], c='k', linewidth=1.5)
+        ax.set_xticklabels(xtick_labels, rotation=45)
+
+        # Plot the anomalies
+        ax.fill_between(
+            df_obs.loc[mask_year, 'Float_year'], df_clim.loc[i, 1:],
+            df_obs.loc[mask_year, 'Temperature(C)'],
+            where=df_obs.loc[mask_year, 'Temperature(C)'] > df_clim.loc[i, 1:],
+            color='r'
+        )
+        ax.fill_between(
+            df_obs.loc[mask_year, 'Float_year'], df_clim.loc[i, 1:],
+            df_obs.loc[mask_year, 'Temperature(C)'],
+            where=df_obs.loc[mask_year, 'Temperature(C)'] < df_clim.loc[i, 1:],
+            color='b'
+        )
+
+    os.chdir(old_dir)
     return
 
 
@@ -162,7 +289,7 @@ def multi_trend_table_image():
 
     analysis_dir = os.path.join(new_dir, 'analysis')
     figures_dir = os.path.join(new_dir, 'figures')
-    data_dir = os.path.join(new_dir, 'data')
+    data_dir = os.path.join(new_dir, 'data', 'monthly')
 
     # Get file containing new trends
     new_trend_file = './analysis/monte_carlo_max_siml50000_ols_st_cummins.csv'
@@ -265,7 +392,7 @@ def trend_table_image():
 
     analysis_dir = os.path.join(new_dir, 'analysis')
     figures_dir = os.path.join(new_dir, 'figures')
-    data_dir = os.path.join(new_dir, 'data')
+    data_dir = os.path.join(new_dir, 'data', 'monthly')
 
     # Get file containing new trends
     new_trend_file = './analysis/monte_carlo_max_siml50000_st_cummins.csv'
@@ -555,12 +682,6 @@ def main(
     new_dir = os.path.dirname(old_dir)
     os.chdir(new_dir)
 
-    station_names = [
-        "Amphitrite Point", "Bonilla Island", "Chrome Island",
-        "Entrance Island", "Kains Island",
-        "Langara Island", "Pine Island", "Race Rocks"
-    ]
-
     # Plot climatological monthly means at each station
     output_folder = os.path.join(new_dir, 'figures')
 
@@ -581,7 +702,7 @@ def main(
     if plot_t_anom:
         subplot_letters = 'abcdefgh'
 
-        for stn, f, letter in zip(station_names, anom_files, subplot_letters):
+        for stn, f, letter in zip(STATION_NAMES, anom_files, subplot_letters):
             png_filename = os.path.join(
                 output_folder, stn.replace(' ', '_') + '_monthly_mean_sst_anomalies_ols.png'
             )
