@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>BC Lightstation Sea-Surface Temperature</title>
     <link rel="stylesheet" href="style.css">
+    <script src="main.js"></script>
 </head>
 <body>
 
@@ -18,18 +19,46 @@
     July 2023
 </p>
 <p>
-    Since the early 20th century, sea-surface temperature (SST) and salinity observations have been
-    recorded at lightstations on the coast of British Columbia. Today, this monitoring program
-    is known as the British Columbia Shore Station Oceanographic Program (BCSOP). The SST data from
-    eight out of 12 currently active stations are presented on this page. The selected stations
-    were chosen because of the longevity of their records and for their coverage along BC's coast.
+    Daily sea surface temperature and salinity observations have been carried out
+    at several locations on the coast of British Columbia since the early part of
+    the 20th century. Observations started at the Pacific Biological Station
+    (Departure Bay) in 1914; 11 stations were added in the mid-1930s and several
+    more in the 1960s. The number of stations reporting at any given time has
+    varied as sampling has been discontinued at some stations and started or
+    resumed at others.
 </p>
 <p>
-    The BC lightstation SST data used here, as well as sea-surface salinity data, can be found on
+    Presently termed the British Columbia Shore Station Oceanographic Program
+    (BCSOP), there are 12 active participating stations. Most of the stations
+    are at lighthouses staffed by Fisheries and Oceans Canada, but three (Race
+    Rocks, Amphitrite Point, and Active Pass) are sampled by contracted observers.
+</p>
+<p>
+    Observations are made daily using seawater collected in a bucket lowered into
+    the surface water at or near the daytime high tide. This sampling method was
+    designed long ago by Dr. John P. Tully and has not been changed in the
+    interests of a homogeneous data set. This means, for example, that if an
+    observer starts sampling one day at 6 a.m., and continues to sample at the
+    daytime high tide on the second day the sample will be taken at about 06:50
+    the next day, 07:40 the day after etc. When the daytime high-tide gets close
+    to 6 p.m. the observer will then begin again to sample early in the morning,
+    and the cycle continues. Since there is a day/night variation in the sea
+    surface temperatures the daily time series will show a signal that varies
+    with the 14-day tidal cycle. This artifact does not affect the monthly sea
+    surface temperature data.
+</p>
+<p>
+    The monthly averaged SST data from eight out of 12 currently active stations
+    are presented on this page. The selected stations were chosen because of the
+    longevity of their records and for their coverage along BC's coast.
+</p>
+<p>
+    The BC lightstation SST data used here, as well as sea-surface salinity data,
+    can be found on
     <a href="https://open.canada.ca/data/en/dataset/719955f2-bf8e-44f7-bc26-6bd623e82884">Open Data</a>
     (note: Open Data will soon be migrating to Enterprise Data Hub).
-    More information on the history of the program and on the sampling method can be found on Open Data
-    and in Cummins & Masson (2014).
+    More information on the program can be found in Cummins & Masson (2014) and
+    in Freeland (1990).
 </p>
 <details>
   <summary>Click here to view map</summary>
@@ -38,20 +67,52 @@
       Map of the locations of the eight British Columbia lightstations featured on this page.
   </p>
 </details>
-<h2>Monthly Averaged Data</h2>
-<h3>SST Climatology</h3>
+
+<div id="product-choice" class="tab">
+  <button class="product-tablinks" onclick="changeAveraging(event)" id="availability">SST Data Availability</button>
+  <button class="product-tablinks" onclick="changeAveraging(event)" id="climatologies">SST Climatologies</button>
+  <button class="product-tablinks" onclick="changeAveraging(event)" id="trends">Anomaly Trends</button>
+</div>
+
+<div id="availability-content" class="product-content availability">
+<h2>SST Data Availability</h2>
+<img src="./figures/lightstation_data_gaps.png" loading="lazy">
+<p>
+    Plot showing data availability for each lightstation on this page. Any gaps in the blue
+    bar for each station indicate no data available for that time.
+</p>
+</div>
+
+<div id="climatologies-content" class="product-content climatologies">
+<h2>Monthly Averaged SST Data</h2>
+<h3>Climatologies</h3>
 <img src="./figures/bc_lightstation_monthly_mean_climatologies_1991-2020.png" height="400px" loading="lazy">
 <p>
     30-year climatologies of sea-surface temperature for 1991-2020, calculated from monthly mean observations.
 </p>
+
+<h3>Data from Most Recent Year</h3>
+<!--    insert grouped-plots here-->
+    <p>
+    SST data from 2023 plotted on top of the climatology for 1991-2020.
+</p>
+</div>
+
+<div id="trends-content" class="product-content trends">
 <h3>Anomaly Time Series</h3>
+<p>
+    The SST anomalies here were computed from monthly mean observations by subtracting
+    the climatological monthly mean based on the 30 year period 1991-2020 from the raw
+    data. The trends of the anomalies were computed from the entire series, without
+    filling in any data gaps in the series with interpolation or otherwise. Both
+    least-squares and Theil-Sen trends are shown in this section. Gaps in the data
+    were filled using spline interpolation before calculating the 95% confidence
+    intervals on the trends using the non-parametric Monte Carlo approach described by
+    Cummins & Masson (2014)
+</p>
 <div class="grouped-plots">
-    <div class="column">
-        <img src="./figures/Amphitrite_Point_monthly_mean_sst_anomalies_ols.png" height="200px">
-    </div>
-    <div class="column">
-        <img src="./figures/Bonilla_Island_monthly_mean_sst_anomalies_ols.png" height="200px">
-    </div>
+    <div class="column"> <img src="./figures/Amphitrite_Point_monthly_mean_sst_anomalies_ols.png" height="200px"> </div>
+    <div class="column"> <img src="./figures/Bonilla_Island_monthly_mean_sst_anomalies_ols.png" height="200px"> </div>
 </div>
 <div class="grouped-plots">
     <div class="image"> <img src="./figures/Chrome_Island_monthly_mean_sst_anomalies_ols.png" height="200px"/> </div>
@@ -66,19 +127,20 @@
     <div class="image"> <img src="./figures/Race_Rocks_monthly_mean_sst_anomalies_ols.png" height="200px"/> </div>
 </div>
 <p>
-    Monthly mean anomalies in computed from monthly mean observations by subtracting the
-    climatological monthly mean based on the 30 year period 1991-2020, for (a)
+    Monthly mean anomalies for (a)
     Amphitrite Point, (b) Bonilla Island, (c) Chrome Island, (d) Entrance Island,
     (e) Kains Island, (f) Langara Island, (g) Pine Island, and (h) Race Rocks. The
-    black line shows the least-squares trend.
+    black line in each plot shows the least-squares trend for the record, which was
+    calculated from the entire series without filling in any data gaps.
 </p>
 <h3>Comparison of Trends</h3>
 <p>
     Table of lighthouse stations and their analysis periods and linear SST trends.
-    Both least-squares and Theil-Sen trends are given.
+    Both least-squares and Theil-Sen trends are given and were calculated from the
+    entire anomaly series without filling in any data gaps.
     New results are listed after the results of Cummins & Masson
-    (2014) for comparison. 95% confidence intervals were computed using the Monte Carlo
-    approach described by Cummins & Masson (2014).
+    (2014) for comparison. The 95% confidence intervals accompanying each trend
+    were computed using the Monte Carlo approach described by Cummins & Masson (2014).
 </p>
 <img src="./figures/monte_carlo_max_siml50000_ols_st_cummins_cm2014.png" height="250px" loading="lazy">
 <h3>Notes</h3>
@@ -100,11 +162,18 @@
         record.  The least-squares trend for the abridged record is 1.34
         &deg;C/century compared with 1.28 &deg;C/century for the entire record.</li>
 </ul>
+</div>
+
 <h2>References</h2>
 <p>
     Cummins, P. F. & Masson, D. (2014). Climatic variability and trends in the surface
     waters of coastal British Columbia. Progress in Oceanography, <i>120</i>(2014),
     pp. 279–290. http://dx.doi.org/10.1016/j.pocean.2013.10.002
+</p>
+<p>
+    Freeland, H. J. (1990). Sea surface temperatures along the coast of British
+    Columbia: regional evidence for a warming trend. Can. J. Fish. Aquat. Sci.
+    47: 346-350.
 </p>
 <h2>Contact</h2>
 <p>
@@ -134,4 +203,5 @@
 <!--    0.1 psu, respectively."-->
 
 </body>
+
 </html>
