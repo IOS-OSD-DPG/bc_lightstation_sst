@@ -44,9 +44,9 @@ for i in range(len(df.index)):
     ax.annotate(pad + df.index[i], (x[i], y[i]))
 
 # Plot formatting
-plot_name = '.\\figures\\current\\lightstation_map.png'
+plot_name = '.\\figures\\lightstation_map.png'
 plt.tight_layout()
-plt.savefig(plot_name)  # Save at lower quality than dpi=400
+plt.savefig(plot_name, dpi=300)  # Save at lower quality than dpi=400
 plt.close(fig)
 
 # Reset the working directory
