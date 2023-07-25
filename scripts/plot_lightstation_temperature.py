@@ -52,15 +52,17 @@ def date_to_flat_numeric(all_years):
     return date_flat
 
 
-def plot_lighthouse_t(anom_file: str, station_name: str, subplot_letter: str, plot_name: str,
-                      best_fit=None):
+def plot_lighthouse_t(anom_file: str, station_name: str, subplot_letter: str,
+                      plot_name: str, best_fit=None):
     """
     Plot lightstation sea surface temperature anomalies in grey with a trend line
     :param anom_file: path of file containing SST anomaly data
     :param station_name: name of the lightstation
-    :param subplot_letter: a letter to add to the corner of the plot if it will be a subplot
+    :param subplot_letter: a letter to add to the corner of the plot if it will
+    be a subplot
     :param plot_name: full path name to save the plot to
-    :param best_fit: None or "lstq" or the full path to a csv file containing the best fit results
+    :param best_fit: None or "lstq" or the full path to a csv file containing the
+    best fit results
     :return:
     """
     anom_df = pd.read_csv(anom_file, index_col=[0])
@@ -119,6 +121,12 @@ def plot_lighthouse_t(anom_file: str, station_name: str, subplot_letter: str, pl
         x_linspace = np.linspace(date_flat[0], date_flat[-1], 100)
         y_hat_linspace = slope / 100 * x_linspace + y_int  # Slope in per 100 years?
         ax.plot(x_linspace, y_hat_linspace, c='k')
+        # Add CI dotted or different colour lines
+        y_ci = float(regr_results.iloc[mask, 4])
+        y_lower_ci = y_hat_linspace - y_ci
+        y_upper_ci = y_hat_linspace + y_ci
+        ax.plot(x_linspace, y_lower_ci, '-b')
+        ax.plot(x_linspace, y_upper_ci, '-b')
 
     # Plot formatting
     ax.set_xlim((min(date_flat), max(date_flat)))
@@ -378,8 +386,8 @@ def multi_trend_table_image():
     return
 
 
-def trend_table_image():
-    """
+def trend_table_image_deprec():
+    """ DEPRECATED
     Save the table of analysis periods, trends, and confidence intervals as an image.
     Include the Cummins & Masson (2014) data for comparison.
     Code requires and assumes that stations are only listed in alphabetical order
@@ -469,10 +477,10 @@ def plot_climatology(clim_file, output_dir):
     ax.set_xlim((min(month_numbers), max(month_numbers)))
     ax.set_xlabel('Month')
     ax.set_ylabel('Temperature ($^\circ$C)')
-    ax.set_title('Climatological monthly mean temperatures for 1991-2020')
+    # ax.set_title('Climatological monthly mean temperatures for 1991-2020')
     plt.tight_layout()
     png_name = 'bc_lightstation_monthly_mean_climatologies_1991-2020.png'
-    plt.savefig(os.path.join(output_dir, png_name))
+    plt.savefig(os.path.join(output_dir, png_name), dpi=300)
     plt.close()
     return
 
@@ -707,6 +715,11 @@ def main(
                 output_folder, stn.replace(' ', '_') + '_monthly_mean_sst_anomalies_ols.png'
             )
             plot_lighthouse_t(f, stn, letter, png_filename, best_fit=monte_carlo_results)
+
+    if plot_clim:
+        clim_file = os.path.join(
+            input_folder, 'lighthouse_sst_climatology_1991-2020.csv')
+        plot_climatology(clim_file=clim_file, output_dir=output_folder)
 
     return
 
