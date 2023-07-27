@@ -15,7 +15,7 @@
 <!--<h1>{{ page.title }}</h1>-->
 <h1>BC Lightstation Sea-Surface Temperature</h1>
 <p style="color: grey">
-    July 2023
+    July 2023<br><br>
 </p>
 <p>
     Daily sea surface temperature and salinity observations have been carried out
@@ -47,7 +47,7 @@
     surface temperature data.
 </p>
 <p>
-    The monthly averaged SST data from eight out of 12 currently active stations
+    The monthly averaged and daily SST data from eight out of 12 currently active stations
     are presented on this page. The selected stations were chosen because of the
     longevity of their records and for their coverage along BC's coast.
 </p>
@@ -65,6 +65,7 @@
 <div class="tab">
   <button class="tablinks" onclick="openTab(event, 'Map of Locations')" id="defaultOpen">Map of Locations</button>
   <button class="tablinks" onclick="openTab(event, 'Data Availability')">Data Availability</button>
+  <button class="tablinks" onclick="openTab(event, 'Data from Most Recent Year')">Data from Most Recent Year</button>
   <button class="tablinks" onclick="openTab(event, 'Climatologies')">Climatologies</button>
   <button class="tablinks" onclick="openTab(event, 'Anomaly Trends')">Anomaly Trends</button>
 </div>
@@ -85,33 +86,39 @@
     </p>
 </div>
 
+<div id="Data from Most Recent Year" class="tabcontent">
+    <h2>Data from Most Recent Year</h2>
+    <div class="grouped-plots">
+        <div class="column"> <img src="./figures/Amphitrite_Point_daily_anomalies_2023_21_day_smooth.png" height="200px"> </div>
+        <div class="column"> <img src="./figures/Bonilla_Island_daily_anomalies_2023_21_day_smooth.png" height="200px"> </div>
+    </div>
+    <div class="grouped-plots">
+        <div class="image"> <img src="./figures/Chrome_Island_daily_anomalies_2023_21_day_smooth.png" height="200px"/> </div>
+        <div class="image"> <img src="./figures/Entrance_Island_daily_anomalies_2023_21_day_smooth.png" height="200px"/> </div>
+    </div>
+    <div class="grouped-plots">
+        <div class="image"> <img src="./figures/Kains_Island_daily_anomalies_2023_21_day_smooth.png" height="200px"/> </div>
+        <div class="image"> <img src="./figures/Langara_Island_daily_anomalies_2023_21_day_smooth.png" height="200px"/> </div>
+    </div>
+    <div class="grouped-plots">
+        <div class="image"> <img src="./figures/Pine_Island_daily_anomalies_2023_21_day_smooth.png" height="200px"/> </div>
+        <div class="image"> <img src="./figures/Race_Rocks_daily_anomalies_2023_21_day_smooth.png" height="200px"/> </div>
+    </div>
+    <p>
+        Daily SST data from 2023. The black line shows the average of all observations for
+        each day of the year over the entire record, subjected to a 21-day moving average
+        to smooth the curve.
+        The blue areas represent observations that are below average, while the red areas
+        represent observations that are above average.
+        Data from Chrome Island for 2023 are not available yet.
+    </p>
+</div>
+
 <div id="Climatologies" class="tabcontent">
-    <h2>Monthly Averaged SST Data</h2>
-    <h3>Climatologies</h3>
+    <h2>Monthly Mean Climatologies</h2>
     <img src="./figures/bc_lightstation_monthly_mean_climatologies_1991-2020.png" width="600" height="450" loading="lazy">
     <p>
         30-year climatologies of sea-surface temperature for 1991-2020, calculated from monthly mean observations.
-    </p>
-
-    <h3>Data from Most Recent Year</h3>
-    <div class="grouped-plots">
-        <div class="column"> <img src="./figures/" height="200px"> </div>
-        <div class="column"> <img src="./figures/" height="200px"> </div>
-    </div>
-    <div class="grouped-plots">
-        <div class="image"> <img src="./figures/" height="200px"/> </div>
-        <div class="image"> <img src="./figures/" height="200px"/> </div>
-    </div>
-    <div class="grouped-plots">
-        <div class="image"> <img src="./figures/" height="200px"/> </div>
-        <div class="image"> <img src="./figures/" height="200px"/> </div>
-    </div>
-    <div class="grouped-plots">
-        <div class="image"> <img src="./figures/" height="200px"/> </div>
-        <div class="image"> <img src="./figures/" height="200px"/> </div>
-    </div>
-    <p>
-        Daily SST data from 2023 plotted on top of the climatologies for 1991-2020.
     </p>
 </div>
 
@@ -149,7 +156,11 @@
         Amphitrite Point, (b) Bonilla Island, (c) Chrome Island, (d) Entrance Island,
         (e) Kains Island, (f) Langara Island, (g) Pine Island, and (h) Race Rocks. The
         black line in each plot shows the least-squares trend for the record, which was
-        calculated from the entire series without filling in any data gaps.
+        calculated from the entire series without filling in any data gaps. The blue lines
+        represent the lower and upper 95% confidence intervals on the trend, which were
+        computed using the nonparametric Monte Carlo approach described by Cummins &
+        Masson (2014). Gaps were filled using spline interpolation prior to computing
+        the confidence intervals.
     </p>
     <h3>Comparison of Trends</h3>
     <p>
@@ -196,6 +207,7 @@
 </p>
 <h2>Contact</h2>
 <p>
+    Data Products Team, Ocean Sciences Division<br>
     DFO.PAC.SCI.IOSData-DonneesISO.SCI.PAC.MPO@dfo-mpo.gc.ca
 </p>
 <!--<!DOCTYPE html>-->
