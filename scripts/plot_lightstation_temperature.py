@@ -13,6 +13,8 @@ STATION_NAMES = [
     "Entrance Island", "Kains Island",
     "Langara Island", "Pine Island", "Race Rocks"
 ]
+MONTH_ABBREV = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+                'Oct', 'Nov', 'Dec']
 
 
 def lstq_model(anom_1d, date_numeric_1d):
@@ -209,10 +211,14 @@ def plot_data_gaps():
     return
 
 
-def plot_daily_filled_anomalies(year: int):
+def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
     """
-    Plot the most recent year's raw data on top of the 1991-2020 climatology
+    Plot the most recent year's raw data on top of the daily average of all time
     for each station
+    inputs:
+        - year: The year for which to plot the daily data
+        - do_smooth: Whether to smooth the daily average data to get a smooth curve
+        - window: size of window (in units of days) to smooth with a rolling mean
     :return:
     """
     old_dir = os.getcwd()
@@ -226,45 +232,127 @@ def plot_daily_filled_anomalies(year: int):
         return
     daily_file_list.sort()
 
-    # todo need a smoother curve, how?
-    climatology_file = '.\\analysis\\lighthouse_sst_climatology_1991-2020.csv'
-    # Add numeric index and push the station name index to the first column
-    df_clim = pd.read_csv(climatology_file)
+    final_daily_list = []
+    for elem in daily_file_list:
+        if all([nm not in elem for nm in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
+            final_daily_list.append(elem)
 
-    month_numbers = np.arange(1, 12 + 1, 1)
-    xtick_labels = [abbrev.title() for abbrev in df_clim.columns[1:]]
+    if len(final_daily_list) != len(STATION_NAMES):
+        print('List of daily data files does not match length of STATION_NAMES global variable! Exiting')
+        return
+
+    # # Need a smoother curve than the monthly climatology --> compute daily climatology
+    # climatology_file = '.\\analysis\\lighthouse_sst_climatology_1991-2020.csv'
+    # # Add numeric index and push the station name index to the first column
+    # df_clim = pd.read_csv(climatology_file)
 
     days_per_year = 365
+    month_numbers = np.arange(1, 12 + 1, 1)
 
-    for i in range(len(daily_file_list)):
+    xtick_labels = MONTH_ABBREV
+    # Get the xtick locations in the correct units
+    month_datetime = pd.to_datetime([f'{m}/1/{year}' for m in month_numbers])
+    xtick_locations = month_datetime.dayofyear.to_numpy()
+
+    subplot_letters = 'abcdefgh'
+
+    for i in range(len(final_daily_list)):
         # Read in fixed width file
-        df_obs = pd.read_fwf(daily_file_list[i], na_values=[99.99, 999.9, 999.99])
+        df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
+                             na_values=[99.99, 999.9, 999.99])
 
         # Convert the year-month-day columns into floats
         df_obs['Datetime'] = pd.to_datetime(df_obs.loc[:, ['Year', 'Month', 'Day']])
-        df_obs['Float_year'] = df_obs['Datetime'].dt.dayofyear / days_per_year + df_obs['Year']
+        # df_obs['Float_year'] = df_obs['Datetime'].dt.dayofyear / days_per_year + df_obs['Year']
 
         # Mask of selected year
         mask_year = [int(y) == year for y in df_obs.loc[:, 'Year']]
 
-        # Plot the climatology
-        fig, ax = plt.subplots()
-        ax.plot(month_numbers, df_clim.loc[i, 1:], c='k', linewidth=1.5)
-        ax.set_xticklabels(xtick_labels, rotation=45)
+        # Check that there are data available from the selected year
+        try:
+            last_dayofyear = df_obs.loc[mask_year, 'Datetime'].dt.dayofyear.to_numpy()[-1]
+            # print('last day of year', year, ':', last_dayofyear)
+        except IndexError:
+            print(f"No data available from {STATION_NAMES[i]} in year {year}; skipping")
+            continue
 
-        # Plot the anomalies
+        # Compute the average of all observations for each day of the year
+        # Initialize an array to hold the daily climatological values
+        daily_clim = pd.Series(data=days_per_year, dtype=float)
+
+        # Populate the array with mean values
+        for k in range(1, days_per_year + 1):
+            daily_clim.loc[k - 1] = df_obs.loc[
+                df_obs['Datetime'].dt.dayofyear == k, 'Temperature(C)'
+            ].mean(skipna=True)
+
+        if do_smooth:
+            # Use 14-day rolling average as default
+            if window is None:
+                window = 14
+            # Pad the start of the climatology with *window*-number of days
+            # of the end of the climatology, so that there are no nans in January
+            daily_clim_pad = pd.Series(data=np.zeros(len(daily_clim) + window))
+
+            # End index is inclusive in pandas .loc, so need the -1
+            # Must include the tolist() part otherwise daily_clim_pad gets set to NaNs
+            # maybe because the indices aren't aligned?
+            daily_clim_pad.loc[:window - 1] = daily_clim.loc[len(daily_clim) - window:].tolist()
+            daily_clim_pad.loc[window:] = daily_clim.loc[:].tolist()
+            daily_clim_smooth = daily_clim_pad.rolling(window=window).mean()
+            # Remove the pads
+            clim_to_plot = daily_clim_smooth.loc[window:]
+
+            # Reset the index of the series to start at zero instead of leaving it
+            # starting at 14; don't keep the original index as a new column
+            clim_to_plot.reset_index(drop=True, inplace=True)
+        else:
+            clim_to_plot = daily_clim
+
+        # Plot the climatology
+        fig, ax = plt.subplots(figsize=[6, 3])
+        ax.plot(np.arange(1, 365 + 1), clim_to_plot, c='k', linewidth=1.5)
+
+        # Plot the anomalies: x, y1, y2
+        # Get the last day of year of the chosen year to index the climatology with
+        # todo make sure the objects compared are same size
         ax.fill_between(
-            df_obs.loc[mask_year, 'Float_year'], df_clim.loc[i, 1:],
+            df_obs.loc[mask_year, 'Datetime'].dt.dayofyear,
+            clim_to_plot.loc[:last_dayofyear - 1],  # -1 because indexing starts at zero
             df_obs.loc[mask_year, 'Temperature(C)'],
-            where=df_obs.loc[mask_year, 'Temperature(C)'] > df_clim.loc[i, 1:],
+            where=(
+                    df_obs.loc[mask_year, 'Temperature(C)'].to_numpy() >
+                    clim_to_plot.loc[:last_dayofyear - 1].to_numpy()
+            ),
             color='r'
         )
         ax.fill_between(
-            df_obs.loc[mask_year, 'Float_year'], df_clim.loc[i, 1:],
+            df_obs.loc[mask_year, 'Datetime'].dt.dayofyear,
+            clim_to_plot.loc[:last_dayofyear - 1],
             df_obs.loc[mask_year, 'Temperature(C)'],
-            where=df_obs.loc[mask_year, 'Temperature(C)'] < df_clim.loc[i, 1:],
+            where=(
+                    df_obs.loc[mask_year, 'Temperature(C)'].to_numpy() <
+                    clim_to_plot.loc[:last_dayofyear - 1].to_numpy()
+            ),
             color='b'
         )
+        # Format the plot
+        # Label the x and y axes, units are integer day of year
+        ax.set_xticks(ticks=xtick_locations, labels=xtick_labels, rotation=45)
+        ax.set_ylabel('Temperature ($^\circ$C)')
+        ax.set_title(f'({subplot_letters[i]}) {STATION_NAMES[i]}')
+        plt.tight_layout()
+
+        # Save the plot
+        plot_name = STATION_NAMES[i].replace(' ', '_') + f'_daily_anomalies_{year}.png'
+
+        if do_smooth:
+            plot_name = plot_name.replace('.png', f'_{window}_day_smooth.png')
+
+        plt.savefig(
+            os.path.join(new_dir, 'figures', plot_name),
+            dpi=300)
+        plt.close(fig)
 
     os.chdir(old_dir)
     return
@@ -468,14 +556,17 @@ def plot_climatology(clim_file, output_dir):
     month_numbers = np.arange(1, 12 + 1)
 
     fig, ax = plt.subplots(figsize=[6, 4.5])  # width, height
-    for station in clim_df.index:
+    line_styles = ['-', ':', '--'] * 3
+    # line_styles.sort()
+    for i in range(len(clim_df)):
+        station = clim_df.index[i]
         station_name = station.split('_')[0] + ' ' + station.split('_')[1]
         ax.plot(month_numbers, clim_df.loc[station, :],
-                label=station_name, marker='.')
+                label=station_name, marker='.', linestyle=line_styles[i])
 
     plt.legend()
     ax.set_xlim((min(month_numbers), max(month_numbers)))
-    ax.set_xlabel('Month')
+    ax.set_xticks(month_numbers, labels=MONTH_ABBREV, rotation=45)
     ax.set_ylabel('Temperature ($^\circ$C)')
     # ax.set_title('Climatological monthly mean temperatures for 1991-2020')
     plt.tight_layout()
@@ -684,7 +775,7 @@ def sst_all_time_mean(monthly_mean_file):
 def main(
         plot_t_anom: bool = False,
         plot_clim: bool = False,
-        plot_filled_sst: bool = False
+        plot_daily_anom: bool = False
 ):
     old_dir = os.getcwd()
     new_dir = os.path.dirname(old_dir)
@@ -721,6 +812,10 @@ def main(
             input_folder, 'lighthouse_sst_climatology_1991-2020.csv')
         plot_climatology(clim_file=clim_file, output_dir=output_folder)
 
+    if plot_daily_anom:
+        plot_daily_filled_anomalies(2023, True)
+
+    os.chdir(old_dir)
     return
 
 
