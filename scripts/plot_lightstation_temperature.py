@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import pandas as pd
 import os
 import glob
@@ -7,6 +8,8 @@ from patsy import dmatrices
 from statsmodels.api import OLS
 import dataframe_image as dfi
 from scripts.trend_estimation import flatten_dframe
+import seaborn as sns
+from blume.table import table
 
 STATION_NAMES = [
     "Amphitrite Point", "Bonilla Island", "Chrome Island",
@@ -54,7 +57,7 @@ def date_to_flat_numeric(all_years):
     return date_flat
 
 
-def plot_lighthouse_t(anom_file: str, station_name: str, subplot_letter: str,
+def plot_monthly_anom(anom_file: str, station_name: str, subplot_letter: str,
                       plot_name: str, best_fit=None):
     """
     Plot lightstation sea surface temperature anomalies in grey with a trend line
@@ -221,9 +224,10 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
         - window: size of window (in units of days) to smooth with a rolling mean
     :return:
     """
-    old_dir = os.getcwd()
-    new_dir = os.path.dirname(old_dir)
-    os.chdir(new_dir)
+    # old_dir = os.getcwd()
+    # new_dir = os.path.dirname(old_dir)
+    # os.chdir(new_dir)
+    new_dir = os.getcwd()
 
     # Use daily data instead of monthly mean observations
     daily_file_list = glob.glob(new_dir + '\\data\\daily\\*.txt')
@@ -299,7 +303,8 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
             # maybe because the indices aren't aligned?
             daily_clim_pad.loc[:window - 1] = daily_clim.loc[len(daily_clim) - window:].tolist()
             daily_clim_pad.loc[window:] = daily_clim.loc[:].tolist()
-            daily_clim_smooth = daily_clim_pad.rolling(window=window).mean()
+            # Set the labels at the center of the window, defaults to right of window
+            daily_clim_smooth = daily_clim_pad.rolling(window=window, center=True).mean()
             # Remove the pads
             clim_to_plot = daily_clim_smooth.loc[window:]
 
@@ -315,7 +320,6 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
 
         # Plot the anomalies: x, y1, y2
         # Get the last day of year of the chosen year to index the climatology with
-        # todo make sure the objects compared are same size
         ax.fill_between(
             df_obs.loc[mask_year, 'Datetime'].dt.dayofyear,
             clim_to_plot.loc[:last_dayofyear - 1],  # -1 because indexing starts at zero
@@ -339,6 +343,12 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
         # Format the plot
         # Label the x and y axes, units are integer day of year
         ax.set_xticks(ticks=xtick_locations, labels=xtick_labels, rotation=45)
+        ax.tick_params(axis="x", direction="in", bottom=True, top=True)
+        ax.tick_params(axis="y", direction="in", left=True, right=True)
+        # Add light grey grid lines
+        ax.set_axisbelow(True)
+        plt.grid(which='major', axis='y', color='lightgrey', linestyle='-')
+        # Add labels
         ax.set_ylabel('Temperature ($^\circ$C)')
         ax.set_title(f'({subplot_letters[i]}) {STATION_NAMES[i]}')
         plt.tight_layout()
@@ -354,7 +364,7 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
             dpi=300)
         plt.close(fig)
 
-    os.chdir(old_dir)
+    # os.chdir(old_dir)
     return
 
 
@@ -772,10 +782,328 @@ def sst_all_time_mean(monthly_mean_file):
     return np.round(all_time_mean, 2) if all_time_mean < 10 else np.round(all_time_mean, 1)
 
 
+def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
+                         year_ranges: list):
+    # Column names for statistic tables
+    stat_table_cols = ['Time Period', 'Mean', 'Median', 'Skewness', 'Min',
+                       'Max', 'SD', '25%ile', '75%ile']
+
+    # Suppress legend since it's in the time series plot
+    # Have to reverse dataframe order to plot newest data in front
+    sns.kdeplot(df, x=var, hue='Year Range', fill=True,
+                legend=False, ax=ax)
+    # Add a light grey grid behind the curves
+    ax.set_axisbelow(True)
+    plt.grid(which='major', axis='both', color='lightgrey')
+    # Save grid limits for later since seaborn is cutting off plot edges
+    ylim = ax.get_ylim()
+    # Save yticks for plotting boxplots later
+    yticks = ax.get_yticks()
+    # Add dashed vertical lines at +-3 temperature anomalies and at 0 deg C
+    if var == 'Temperature Anomaly(C)':
+        ax.vlines(x=[-3, 3], ymin=ylim[0], ymax=ylim[1], linestyles='dashed', linewidth=0.75,
+                  colors='grey', zorder=1.5)
+        ax.vlines(x=0, ymin=ylim[0], ymax=ylim[1], linestyles='solid', linewidth=0.75,
+                  colors='grey', zorder=1.5)
+
+    # Label the x-axis
+    if 'Temperature' in var:
+        ax.set_xlabel(var.replace('(C)', ' ($^\circ$C)'))
+    else:
+        ax.set_xlabel(var)
+    # # Move x ticks to top
+    # ax.tick_params(axis='x', labeltop=True, labelbottom=False)
+
+    # ---------Statistics table----------
+
+    # Add a table containing statistics below the subplot
+    cellText = []
+    for yr in year_ranges[::-1]:
+        # pandas mean defaults to skipna=True
+        mask = df['Year Range'] == yr
+        cellText.append(
+            [
+                yr,
+                "%.2f" % np.round(df.loc[mask, var].mean(), 2),
+                "%.2f" % np.round(df.loc[mask, var].median(), 2),
+                "%.2f" % np.round(df.loc[mask, var].skew(), 2),
+                "%.2f" % np.round(df.loc[mask, var].min(), 2),
+                "%.2f" % np.round(df.loc[mask, var].max(), 2),
+                "%.2f" % np.round(df.loc[mask, var].std(), 2),
+                "%.2f" % np.round(df.loc[mask, var].quantile(q=0.25), 2),
+                "%.2f" % np.round(df.loc[mask, var].quantile(q=0.75), 2)
+            ]
+        )
+    # tab = ax.table(cellText=cellText,  # 2d list of str
+    #                  rowLabels=None,
+    #                  rowColours=None,
+    #                  colLabels=stat_table_cols,
+    #                  loc='bottom',
+    #                  fontsize=24)
+
+    # Add colors to table rows corresponding to density curves by year range
+    ncols = len(cellText[0])
+    tab = table(ax, cellText=cellText, rowLabels=None,
+                cellColours=[
+                    [sns.color_palette('pastel')[k]] * ncols for k in range(len(year_ranges))
+                ],
+                colColours=[sns.color_palette('pastel')[-3]] * ncols,  # grey for column headers
+                colLabels=stat_table_cols, loc='top', cellLoc='center',
+                colWidths=[
+                    1.5 / ncols, 1 / ncols, 1 / ncols, 1.25 / ncols,
+                    .75 / ncols, .75 / ncols, .75 / ncols, 1 / ncols,
+                    1 / ncols
+                ])
+    # Disable auto font size
+    tab.auto_set_font_size(False)
+    tab.set_fontsize(4)
+    # # Resize columns: make min, max, std columns narrower and Year Range wider
+    # # col: The indices of the columns to auto-scale, int or sequence of ints.
+    # tab.auto_set_column_width(col=np.arange(len(cellText[0])))
+
+    # ------------------------------
+
+    # Add a modified box plot:
+    df_stats = pd.DataFrame(
+        cellText,
+        columns=['Year Range', 'Mean', 'Median', 'Skew', 'Min', 'Max',
+                 'STD', '25%ile', '75%ile']
+    )
+    # Change datatype from string to float, except for Year Range column
+    for col in df_stats.columns[1:]:
+        df_stats.loc[:, col] = [float(x) for x in df_stats[col]]
+
+    # Add column containing the y coordinates for plotting the boxplots
+    # Set the y values at which the box plots will be plotted, descending order
+    # Leave some buffer room at the top and bottom edges of the plot
+    # df_stats['y values'] = yticks[1:len(df_stats) + 1]
+    df_stats['y values'] = yticks[len(df_stats):0:-1]
+
+    # median as black dot, drawn on top of larger coloured mean dot
+    # Artists with higher zorder are drawn on top.
+    # https://matplotlib.org/stable/gallery/misc/zorder_demo.html#zorder-demo
+    sns.scatterplot(df_stats, x='Median', y='y values', legend=False,
+                    ax=ax, c='k', marker='o', s=4,
+                    edgecolor='k', zorder=2.5)
+
+    # mean as filled dot, match opacity of density curves with alpha
+    sns.scatterplot(df_stats, x='Mean', y='y values', hue='Year Range',
+                    legend=False, ax=ax, marker='o', s=15,
+                    edgecolor='k', zorder=2.4)
+
+    # Plot min max and quantiles as whiskers of the modified box plot
+    # Need to make a new dataframe with different format to plot lines
+    # with seaborn
+    df_whiskers = pd.DataFrame(
+        columns=['Year Range', 'minmax', 'quantiles', 'y values'])
+
+    for i in range(len(year_ranges)):
+        yr = year_ranges[i]
+        # Add a row for min and 25%ile
+        df_whiskers.loc[len(df_whiskers)] = [
+            yr,
+            float(df_stats.loc[i, 'Min']),
+            float(df_stats.loc[i, '25%ile']),
+            df_stats.loc[i, 'y values']
+        ]
+        # Add a row for max and 75%ile
+        df_whiskers.loc[len(df_whiskers)] = [
+            yr,
+            float(df_stats.loc[i, 'Max']),
+            float(df_stats.loc[i, '75%ile']),
+            df_stats.loc[i, 'y values']
+        ]
+
+        # min/max
+        sns.lineplot(
+            df_whiskers.loc[len(df_whiskers) - 2:len(df_whiskers) - 1],
+            x='minmax',
+            y='y values',
+            legend=False,
+            ax=ax, c='k', linewidth=0.75, zorder=2.2
+        )
+        # quantiles as a thicker line
+        sns.lineplot(
+            df_whiskers.loc[len(df_whiskers) - 2:len(df_whiskers) - 1],
+            x='quantiles',
+            y='y values',
+            legend=False,
+            ax=ax, c='k', linewidth=2, zorder=2.3
+        )
+
+    # Reset x and y axis limits
+    if var == 'Temperature(C)':
+        ax.set_xlim(0, 25)
+    elif var == 'Temperature Anomaly(C)':
+        ax.set_xlim(-8, 8)
+
+    ax.set_ylim(*ylim)  # Use * to unpack a tuple
+
+    # Add subplot title with padding so it doesn't overlap with table above plot
+    title_pad = len(df_stats) * 10 + 20
+    if var == 'Temperature(C)':
+        ax.set_title('Density of Temperature Observations', loc='left',
+                     pad=title_pad)
+    elif var == 'Temperature Anomaly(C)':
+        ax.set_title('Density of Temperature Anomalies', loc='left',
+                     pad=title_pad)
+    return
+
+
+def plot_daily_T_statistics():
+    """
+    Plot daily SST and anomaly density curves with statistics tables
+    :return:
+    """
+    # Divide the data into 30-year chunks working backwards
+    daily_file_list = glob.glob('.\\data\\daily\\*.txt')
+    if len(daily_file_list) == 0:
+        print('Check suffix of raw files; empty file list returned')
+        return
+    daily_file_list.sort()
+
+    # Remove stations we don't want
+    final_daily_list = []
+    for elem in daily_file_list:
+        if all([nm not in elem for nm in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
+            final_daily_list.append(elem)
+
+    # Check on number of files remaining
+    if len(final_daily_list) != len(STATION_NAMES):
+        print('List of daily data files does not match length of STATION_NAMES global variable! Exiting')
+        return
+
+    days_per_year = 365
+
+    # # Lower the font size
+    # sns.set_theme(font_scale=0.5)
+    mpl.rcParams['font.size'] = 5
+
+    # Iterate through the files and make a plot for each station
+    # for i in range(7, len(final_daily_list)):
+    for i in range(len(final_daily_list)):
+        print(os.path.basename(final_daily_list[i]))
+        # Read in fixed width file
+        df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
+                             na_values=[99.99, 999.9, 999.99])
+
+        # Compute all-time daily means and use to get anomalies
+
+        # Convert the year-month-day columns into floats
+        df_obs['Datetime'] = pd.to_datetime(df_obs.loc[:, ['Year', 'Month', 'Day']])
+        # df_obs['Float_year'] = df_obs['Datetime'].dt.dayofyear / days_per_year + df_obs['Year']
+
+        # Compute the average of all observations for each day of the year
+        # Initialize an array to hold the daily climatological values
+        daily_clim = pd.Series(data=days_per_year, dtype=float)
+
+        # Initialize column for anomalies
+        df_obs['Temperature Anomaly(C)'] = np.zeros(len(df_obs))
+
+        # Populate the array with mean values
+        for k in range(1, days_per_year + 1):
+            daily_clim.loc[k - 1] = df_obs.loc[
+                df_obs['Datetime'].dt.dayofyear == k, 'Temperature(C)'
+            ].mean(skipna=True)
+            # Populate the anomalies column
+            df_obs.loc[
+                df_obs['Datetime'].dt.dayofyear == k,
+                'Temperature Anomaly(C)'
+            ] = df_obs.loc[
+                    df_obs['Datetime'].dt.dayofyear == k,
+                    'Temperature(C)'
+                ] - daily_clim.loc[k - 1]
+
+        # Create masks for data subsetting by year
+        year_col = df_obs['Year'].to_numpy()
+        df_obs['Year Range'] = np.repeat('', len(df_obs))
+        year_ranges_all = ['1904-1933', '1934-1963', '1964-1993', '1994-2023']
+        year_ranges = []  # Initialize list for all available year ranges to not iterate over a changing list length
+
+        for k in range(len(year_ranges_all)):
+            yr = year_ranges_all[k]
+            st = int(yr.split('-')[0])
+            en = int(yr.split('-')[1])
+
+            if len(df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range']) > 0:
+                if st < int(df_obs['Year'].min()):
+                    st = int(df_obs['Year'].min())
+                    year_ranges_all[k] = str(st) + '-' + year_ranges_all[k].split('-')[1]
+                    yr = year_ranges_all[k]
+                # Populate the Year Range column
+                df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range'] = yr
+                year_ranges.append(yr)
+            # else:
+            #     # Drop year range from list since no obs from that time
+            #     year_ranges.remove(yr)
+            #     # # Modify the earliest range containing data to what year
+            #     # # each record starts
+            #     # st = int(df_obs['Year'].min())
+            #     # year_ranges[k - 1] = str(st) + '-' + year_ranges[k - 1].split('-')[1]
+            #     # yr = year_ranges[k - 1]
+            #     # df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range'] = yr
+
+        # Temporarily change the matplotlib.rcParams object
+        # with mpl.rc_context({'font.size': 14, 'font.weight': 'light'}):
+        # Plot temperature (nrows, ncols, index)
+        ax1 = plt.subplot(211)  # 212)
+        # Enforce gaps in lineplot where there are nan data values
+        # The source code looks like lineplot drops nans from the DataFrame before plotting unfortunately
+        # seaborn.pointplot could fix the problem but it was too slow
+        # sns.lineplot(df_obs, x='Datetime', y='Temperature(C)', hue='Year Range',
+        #              ax=ax1, linewidth=0.5)
+        # sns.pointplot(df_obs, x='Datetime', y='Temperature(C)', hue='Year Range',
+        #               ax=ax1)
+        colours = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']  # sns.color_palette(n_colors=len(year_ranges))
+        for k in range(len(year_ranges)):
+            yr = year_ranges[k]
+            mask = df_obs.loc[:, 'Year Range'] == yr
+            ax1.plot(df_obs.loc[mask, 'Datetime'], df_obs.loc[mask, 'Temperature(C)'],
+                     linewidth=0.2, marker='o', markeredgecolor=None, markersize=0.3,
+                     c=colours[k], label=yr, markerfacecolor=colours[k])
+        plt.grid(which='major', axis='both', color='lightgrey')
+        ax1.legend(loc='upper left', ncol=2)
+        ax1.set_ylim((0, 25))
+        ax1.set_ylabel('Temperature ($^\circ$C)')
+        # # Increase x tick frequency to every 10 years
+        # xticks = ax1.get_xticks()
+        # ax1.set_xticks(np.arange(xticks[0], xticks[-1] + 1, 10))
+        # Remove x axis label
+        ax1.set_xlabel(None)
+        ax1.set_title(STATION_NAMES[i], loc='left')
+
+        # Compute density curve for temperature
+        ax2 = plt.subplot(223)  # 221)
+
+        make_density_subplot(ax2, df_obs, 'Temperature(C)', year_ranges)
+
+        # Plot the temperature anomalies
+        ax3 = plt.subplot(224)  # 222
+
+        make_density_subplot(ax3, df_obs, 'Temperature Anomaly(C)', year_ranges)
+
+        # plt.suptitle(STATION_NAMES[i], horizontalalignment='left')
+        # Add padding between first and second row of plots
+        plt.subplots_adjust(hspace=-0.25)
+        plt.tight_layout()
+        plt_name = STATION_NAMES[i].replace(' ', '_') + '_sst_statistics.png'
+        plt.savefig(f'.\\figures\\{plt_name}', dpi=400)
+        plt.close()
+
+        # # Format the plot
+        # # Label the x and y axes, units are integer day of year
+        # ax.tick_params(axis="x", direction="in", bottom=True, top=True)
+        # ax.tick_params(axis="y", direction="in", left=True, right=True)
+
+    return
+
+
 def main(
         plot_t_anom: bool = False,
         plot_clim: bool = False,
-        plot_daily_anom: bool = False
+        plot_daily_anom: bool = False,
+        plot_daily_anom_window=None,
+        plot_daily_stats: bool = False
 ):
     old_dir = os.getcwd()
     new_dir = os.path.dirname(old_dir)
@@ -805,7 +1133,7 @@ def main(
             png_filename = os.path.join(
                 output_folder, stn.replace(' ', '_') + '_monthly_mean_sst_anomalies_ols.png'
             )
-            plot_lighthouse_t(f, stn, letter, png_filename, best_fit=monte_carlo_results)
+            plot_monthly_anom(f, stn, letter, png_filename, best_fit=monte_carlo_results)
 
     if plot_clim:
         clim_file = os.path.join(
@@ -813,7 +1141,10 @@ def main(
         plot_climatology(clim_file=clim_file, output_dir=output_folder)
 
     if plot_daily_anom:
-        plot_daily_filled_anomalies(2023, True)
+        plot_daily_filled_anomalies(2023, do_smooth=True, window=plot_daily_anom_window)
+
+    if plot_daily_stats:
+        plot_daily_T_statistics()
 
     os.chdir(old_dir)
     return
