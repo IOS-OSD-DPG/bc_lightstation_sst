@@ -57,14 +57,11 @@ def date_to_flat_numeric(all_years):
     return date_flat
 
 
-def plot_monthly_anom(anom_file: str, station_name: str, subplot_letter: str,
-                      plot_name: str, best_fit=None):
+def plot_monthly_anomalies(anom_file: str, station_name: str, plot_name: str, best_fit=None):
     """
     Plot lightstation sea surface temperature anomalies in grey with a trend line
     :param anom_file: path of file containing SST anomaly data
     :param station_name: name of the lightstation
-    :param subplot_letter: a letter to add to the corner of the plot if it will
-    be a subplot
     :param plot_name: full path name to save the plot to
     :param best_fit: None or "lstq" or the full path to a csv file containing the
     best fit results
@@ -135,10 +132,10 @@ def plot_monthly_anom(anom_file: str, station_name: str, subplot_letter: str,
 
     # Plot formatting
     ax.set_xlim((min(date_flat), max(date_flat)))
-    ybot, ytop = plt.ylim()
-    ax.set_ylim((-max(abs(np.array([ybot, ytop]))),
-                 max(abs(np.array([ybot, ytop])))))
-    ax.set_xlabel('Year')
+    # ybot, ytop = plt.ylim()
+    # ax.set_ylim((-max(abs(np.array([ybot, ytop]))),
+    #              max(abs(np.array([ybot, ytop])))))
+    ax.set_ylim((-4, 4))
     ax.set_ylabel('Temperature anomaly ($^\circ$C)')
     ax.minorticks_on()
     plt.tick_params(which='major', direction='in',
@@ -148,7 +145,7 @@ def plot_monthly_anom(anom_file: str, station_name: str, subplot_letter: str,
     # ax.tick_params(axis='x', which='minor', bottom=False, direction='in')
     # ax.set_title(
     #     f'Time series of temperature anomalies at {station_name}')
-    ax.set_title(f'({subplot_letter}) {station_name}')
+    ax.set_title(station_name, loc='left')
     plt.tight_layout()
     plt.savefig(plot_name)
     plt.close(fig)
@@ -477,83 +474,6 @@ def multi_trend_table_image():
     df_img.to_csv(
         os.path.join(analysis_dir, os.path.basename(df_img_name).replace('png', 'csv')),
         index=True
-    )
-
-    # Change the current directory back
-    os.chdir(old_dir)
-    return
-
-
-def trend_table_image_deprec():
-    """ DEPRECATED
-    Save the table of analysis periods, trends, and confidence intervals as an image.
-    Include the Cummins & Masson (2014) data for comparison.
-    Code requires and assumes that stations are only listed in alphabetical order
-    everywhere
-    :return:
-    """
-    old_dir = os.getcwd()
-    new_dir = os.path.dirname(old_dir)
-    os.chdir(new_dir)
-
-    analysis_dir = os.path.join(new_dir, 'analysis')
-    figures_dir = os.path.join(new_dir, 'figures')
-    data_dir = os.path.join(new_dir, 'data', 'monthly')
-
-    # Get file containing new trends
-    new_trend_file = './analysis/monte_carlo_max_siml50000_st_cummins.csv'
-    df_new_trend = pd.read_csv(new_trend_file)
-
-    cm2014_file = './analysis/cummins_masson_2014_trends.csv'
-    cm2014_df = pd.read_csv(cm2014_file)
-
-    # Make a dataframe to print to an image containing the analysis period
-    # and the trends and confidence intervals for each station
-    df_img = cm2014_df
-
-    # Initialize columns for containing the updated results
-    df_img['New analysis time period'] = np.repeat('', len(df_img))
-    df_img['New least-squares trend in C/century'] = np.repeat('', len(df_img))
-
-    # Get the raw data in csv format
-    raw_files = glob.glob(data_dir + '/*MonthlyTemp.csv')
-    if len(raw_files) == 0:
-        print('No monthly temperature data files found; try a different search key')
-        return
-    raw_files.sort()
-
-    # Iterate through all the files
-    for i in range(len(raw_files)):
-        df_in = pd.read_csv(raw_files[i], index_col='Year', na_values=[99.99, 999.9, 999.99])
-
-        # Get the start and end month and year of analysis period
-        # with the end including the very last record, different than nans_to_strip() function
-        st_mth, st_yr, en_mth, en_yr = get_record_st_en(df_in)
-
-        # Both for deg C/century
-        trend_i = np.round(df_new_trend.loc[i, 'Theil-Sen slope [deg C/century]'], decimals=2)
-        conf_int_i = np.round(
-            df_new_trend.loc[i, 'Monte Carlo confidence limit [deg C/century]'],
-            decimals=2
-        )
-
-        # Update the dataframe to be exported as an image
-        df_img.loc[i, 'New analysis time period'] = f'{st_mth} {st_yr} - {en_mth} {en_yr}'
-        df_img.loc[i, 'New least-squares trend in C/century'] = '{:.2f} +/- {:.2f}'.format(
-            trend_i, conf_int_i)
-
-    # Export the table in PNG format
-    df_img.set_index('Station', inplace=True)
-    df_img_name = os.path.join(
-        figures_dir,
-        os.path.basename(new_trend_file).replace('.csv', '_cm2014.png')
-    )
-    dfi.export(df_img, os.path.join(figures_dir, df_img_name))
-
-    # Export the table in csv format too
-    df_img.to_csv(
-        os.path.join(analysis_dir, os.path.basename(df_img_name).replace('png', 'csv')),
-        index=False
     )
 
     # Change the current directory back
@@ -1099,7 +1019,7 @@ def plot_daily_T_statistics():
 
 
 def main(
-        plot_t_anom: bool = False,
+        plot_monthly_anom: bool = False,
         plot_clim: bool = False,
         plot_daily_anom: bool = False,
         plot_daily_anom_window=None,
@@ -1126,14 +1046,12 @@ def main(
         "monte_carlo_max_siml50000_ols_st_cummins.csv"
     )
 
-    if plot_t_anom:
-        subplot_letters = 'abcdefgh'
-
-        for stn, f, letter in zip(STATION_NAMES, anom_files, subplot_letters):
+    if plot_monthly_anom:
+        for stn, f in zip(STATION_NAMES, anom_files):
             png_filename = os.path.join(
                 output_folder, stn.replace(' ', '_') + '_monthly_mean_sst_anomalies_ols.png'
             )
-            plot_monthly_anom(f, stn, letter, png_filename, best_fit=monte_carlo_results)
+            plot_monthly_anomalies(f, stn, png_filename, best_fit=monte_carlo_results)
 
     if plot_clim:
         clim_file = os.path.join(
