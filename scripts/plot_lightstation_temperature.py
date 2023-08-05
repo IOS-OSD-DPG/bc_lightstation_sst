@@ -710,8 +710,10 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # Suppress legend since it's in the time series plot
     # Have to reverse dataframe order to plot newest data in front
-    sns.kdeplot(df, x=var, hue='Year Range', fill=True,
-                legend=False, ax=ax)
+    color_end = 3-len(year_ranges)-1 if 3 > len(year_ranges) else None
+    sns.kdeplot(df.loc[::-1, :], x=var, hue='Year Range', fill=True,
+                legend=False, ax=ax,
+                palette=sns.color_palette()[3:color_end:-1])
     # Add a light grey grid behind the curves
     ax.set_axisbelow(True)
     plt.grid(which='major', axis='both', color='lightgrey')
@@ -721,8 +723,8 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
     yticks = ax.get_yticks()
     # Add dashed vertical lines at +-3 temperature anomalies and at 0 deg C
     if var == 'Temperature Anomaly(C)':
-        ax.vlines(x=[-3, 3], ymin=ylim[0], ymax=ylim[1], linestyles='dashed', linewidth=0.75,
-                  colors='grey', zorder=1.5)
+        ax.vlines(x=[-3, 3], ymin=ylim[0], ymax=ylim[1], linestyles='dashed',
+                  linewidth=0.75, colors='grey', zorder=1.5)
         ax.vlines(x=0, ymin=ylim[0], ymax=ylim[1], linestyles='solid', linewidth=0.75,
                   colors='grey', zorder=1.5)
 
@@ -763,9 +765,9 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # Add colors to table rows corresponding to density curves by year range
     ncols = len(cellText[0])
-    tab = table(ax, cellText=cellText, rowLabels=None,
+    tab = table(ax, cellText=cellText[::-1], rowLabels=None,
                 cellColours=[
-                    [sns.color_palette('pastel')[k]] * ncols for k in range(len(year_ranges))
+                    [sns.color_palette('pastel')[3 - k]] * ncols for k in range(len(year_ranges))
                 ],
                 colColours=[sns.color_palette('pastel')[-3]] * ncols,  # grey for column headers
                 colLabels=stat_table_cols, loc='top', cellLoc='center',
@@ -796,8 +798,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
     # Add column containing the y coordinates for plotting the boxplots
     # Set the y values at which the box plots will be plotted, descending order
     # Leave some buffer room at the top and bottom edges of the plot
-    # df_stats['y values'] = yticks[1:len(df_stats) + 1]
-    df_stats['y values'] = yticks[len(df_stats):0:-1]
+    df_stats['y values'] = yticks[1:len(df_stats) + 1]
 
     # median as black dot, drawn on top of larger coloured mean dot
     # Artists with higher zorder are drawn on top.
@@ -808,6 +809,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # mean as filled dot, match opacity of density curves with alpha
     sns.scatterplot(df_stats, x='Mean', y='y values', hue='Year Range',
+                    palette=sns.color_palette()[3:color_end:-1],
                     legend=False, ax=ax, marker='o', s=15,
                     edgecolor='k', zorder=2.4)
 
@@ -980,7 +982,7 @@ def plot_daily_T_statistics():
             mask = df_obs.loc[:, 'Year Range'] == yr
             ax1.plot(df_obs.loc[mask, 'Datetime'], df_obs.loc[mask, 'Temperature(C)'],
                      linewidth=0.2, marker='o', markeredgecolor=None, markersize=0.3,
-                     c=colours[k], label=yr, markerfacecolor=colours[k])
+                     c=colours[3 - k], label=yr, markerfacecolor=colours[3 - k])
         plt.grid(which='major', axis='both', color='lightgrey')
         ax1.legend(loc='upper left', ncol=2)
         ax1.set_ylim((0, 25))
