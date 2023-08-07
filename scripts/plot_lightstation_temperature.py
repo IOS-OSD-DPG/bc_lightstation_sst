@@ -766,8 +766,13 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
     # Add colors to table rows corresponding to density curves by year range
     ncols = len(cellText[0])
     tab = table(ax, cellText=cellText[::-1], rowLabels=None,
+                # cellColours=[
+                #     [sns.color_palette('pastel')[3:color_end:-1][k]] * ncols
+                #     for k in range(len(year_ranges))
+                # ],
                 cellColours=[
-                    [sns.color_palette('pastel')[3 - k]] * ncols for k in range(len(year_ranges))
+                    [sns.color_palette('pastel')[4-len(year_ranges):4][k]] * ncols
+                    for k in range(len(year_ranges))
                 ],
                 colColours=[sns.color_palette('pastel')[-3]] * ncols,  # grey for column headers
                 colLabels=stat_table_cols, loc='top', cellLoc='center',
@@ -804,13 +809,13 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
     # Artists with higher zorder are drawn on top.
     # https://matplotlib.org/stable/gallery/misc/zorder_demo.html#zorder-demo
     sns.scatterplot(df_stats, x='Median', y='y values', legend=False,
-                    ax=ax, c='k', marker='o', s=4,
-                    edgecolor='k', zorder=2.5)
+                    ax=ax, c='k', marker='o', s=10,
+                    edgecolor='white', zorder=2.5)
 
     # mean as filled dot, match opacity of density curves with alpha
     sns.scatterplot(df_stats, x='Mean', y='y values', hue='Year Range',
                     palette=sns.color_palette()[3:color_end:-1],
-                    legend=False, ax=ax, marker='o', s=15,
+                    legend=False, ax=ax, marker='o', s=18,
                     edgecolor='k', zorder=2.4)
 
     # Plot min max and quantiles as whiskers of the modified box plot
@@ -976,13 +981,16 @@ def plot_daily_T_statistics():
         #              ax=ax1, linewidth=0.5)
         # sns.pointplot(df_obs, x='Datetime', y='Temperature(C)', hue='Year Range',
         #               ax=ax1)
+
+        #          '1904-1933', '1934-1963', '1964-1993', '1994-2023'
         colours = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']  # sns.color_palette(n_colors=len(year_ranges))
         for k in range(len(year_ranges)):
             yr = year_ranges[k]
             mask = df_obs.loc[:, 'Year Range'] == yr
             ax1.plot(df_obs.loc[mask, 'Datetime'], df_obs.loc[mask, 'Temperature(C)'],
                      linewidth=0.2, marker='o', markeredgecolor=None, markersize=0.3,
-                     c=colours[3 - k], label=yr, markerfacecolor=colours[3 - k])
+                     c=colours[4 - len(year_ranges) + k], label=yr,
+                     markerfacecolor=colours[4 - len(year_ranges) + k])
         plt.grid(which='major', axis='both', color='lightgrey')
         ax1.legend(loc='upper left', ncol=2)
         ax1.set_ylim((0, 25))
