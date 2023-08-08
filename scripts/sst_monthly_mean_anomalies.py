@@ -27,50 +27,63 @@ input_files.sort()
 # input_dir = parent_dir + 'update_20230706\\raw_data\\'
 # output_dir = parent_dir + 'update_20230706\\monthly_anom_from_monthly_mean\\'
 
-# ^Change to working in the repo directory from my Documents folder
-old_dir = os.getcwd()
-new_dir = os.path.dirname(old_dir)  # Migrate up a directory level
-os.chdir(new_dir)
 
-# !! May need to change this extension depending on the file names of subsequent updates
-input_files_all = glob.glob(new_dir + './data/*MonthlyTemp.csv')
-input_files_all.sort()
-input_files = []
+def compute_monthly_anomalies(obs_data_suffix: str):
+    """
+    Compute monthly mean SST anomalies from monthly mean observations
+    :return: nothing, but save anomaly data to csv files in the analysis folder of the project
+    """
+    # ^Change to working in the repo directory from my Documents folder
+    old_dir = os.getcwd()
+    new_dir = os.path.dirname(old_dir)  # Migrate up a directory level
+    os.chdir(new_dir)
 
-# Remove stations that aren't being used
-for f in input_files_all:
-    # print(os.path.basename(f), any([name in f for name in ['Departure', 'Egg', 'McInnes', 'Nootka']]))
-    if not any([name in f for name in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
-        input_files.append(f)
+    # !! May need to change this extension depending on the file names of subsequent updates
+    input_files_all = glob.glob(new_dir + f'./data/Monthly/*{obs_data_suffix}')
+    input_files_all.sort()
+    if len(input_files_all) == 0:
+        print('No monthly mean files found with suffix', obs_data_suffix, 'in directory',
+              new_dir)
+        return
+    input_files = []
 
-# Import climatological data
-clim_file = os.path.join(new_dir, 'analysis', 'lighthouse_sst_climatology_1991-2020.csv')
-clim_df = pd.read_csv(clim_file, index_col=[0])
-# clim_df['Station_name'] = [x.split('_')[0] + '_' + x.split('_')[1] for x in clim_df.index]
-clim_df['Station_name'] = [
-    x.split('_')[0] + x.split('_')[1] if x.split('_')[1] == "Rocks"
-    else x.split('_')[0] for x in clim_df.index]
-clim_df.set_index('Station_name', inplace=True)
+    # Remove stations that aren't being used
+    for f in input_files_all:
+        # print(os.path.basename(f), any([name in f for name in ['Departure', 'Egg', 'McInnes', 'Nootka']]))
+        if not any([name in f for name in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
+            input_files.append(f)
 
-for i in range(len(input_files)):
-    # station_name = os.path.basename(input_files[i]).split('_')[0] + '_' + \
-    #                os.path.basename(input_files[i]).split('_')[1]
-    station_name = os.path.basename(input_files[i]).split('MonthlyTemp')[0]
+    # Import climatological data
+    clim_file = os.path.join(new_dir, 'analysis', 'lighthouse_sst_climatology_1991-2020.csv')
+    clim_df = pd.read_csv(clim_file, index_col=[0])
+    # clim_df['Station_name'] = [x.split('_')[0] + '_' + x.split('_')[1] for x in clim_df.index]
+    clim_df['Station_name'] = [
+        x.split('_')[0] + x.split('_')[1] if x.split('_')[1] == "Rocks"
+        else x.split('_')[0] for x in clim_df.index]
+    clim_df.set_index('Station_name', inplace=True)
 
-    # dfin = pd.read_csv(input_files[i], skiprows=1, index_col=[0],
-    #                    na_values=[999.9, 999.99])
-    dfin = pd.read_csv(input_files[i], index_col=[0],
-                       na_values=[99.99, 999.9, 999.99])
-    dfout = pd.DataFrame(index=dfin.index, columns=dfin.columns)
+    for i in range(len(input_files)):
+        # station_name = os.path.basename(input_files[i]).split('_')[0] + '_' + \
+        #                os.path.basename(input_files[i]).split('_')[1]
+        station_name = os.path.basename(input_files[i]).split('MonthlyTemp')[0]
 
-    for month in dfin.columns:
-        dfout.loc[:, month
-                  ] = dfin.loc[:, month] - clim_df.loc[station_name, month.upper()]
+        # dfin = pd.read_csv(input_files[i], skiprows=1, index_col=[0],
+        #                    na_values=[999.9, 999.99])
+        dfin = pd.read_csv(input_files[i], index_col=[0],
+                           na_values=[99.99, 999.9, 999.99])
+        dfout = pd.DataFrame(index=dfin.index, columns=dfin.columns)
 
-    dfout.to_csv(os.path.join(new_dir, 'analysis',
-                              station_name + '_monthly_anom_from_monthly_mean.csv'))
+        for month in dfin.columns:
+            dfout.loc[:, month
+                      ] = dfin.loc[:, month] - clim_df.loc[station_name, month.upper()]
 
-os.chdir(old_dir)
+        dfout.to_csv(os.path.join(new_dir, 'analysis',
+                                  station_name + '_monthly_anom_from_monthly_mean.csv'))
+
+    # Change working directory back
+    os.chdir(old_dir)
+    return
+
 
 """
 input_dir = parent_dir + 'daily_anomalies\\'
