@@ -218,7 +218,8 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
     inputs:
         - year: The year for which to plot the daily data
         - do_smooth: Whether to smooth the daily average data to get a smooth curve
-        - window: size of window (in units of days) to smooth with a rolling mean
+        - window: size of window (in units of days) to smooth with a rolling mean.
+                  If do_smooth is *True*, then window defaults to 21 days if a size is not given
     :return:
     """
     # old_dir = os.getcwd()
@@ -250,12 +251,15 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
     days_per_year = 365
     month_numbers = np.arange(1, 12 + 1, 1)
 
+    # Set y axis limits to visually compare plots more easily
+    ylim = (4, 20)
+
     xtick_labels = MONTH_ABBREV
     # Get the xtick locations in the correct units
     month_datetime = pd.to_datetime([f'{m}/1/{year}' for m in month_numbers])
     xtick_locations = month_datetime.dayofyear.to_numpy()
 
-    subplot_letters = 'abcdefgh'
+    # subplot_letters = 'abcdefgh'
 
     for i in range(len(final_daily_list)):
         # Read in fixed width file
@@ -288,9 +292,9 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
             ].mean(skipna=True)
 
         if do_smooth:
-            # Use 14-day rolling average as default
+            # Use 21-day rolling average as default
             if window is None:
-                window = 14
+                window = 21
             # Pad the start of the climatology with *window*-number of days
             # of the end of the climatology, so that there are no nans in January
             daily_clim_pad = pd.Series(data=np.zeros(len(daily_clim) + window))
@@ -338,6 +342,9 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
             color='b'
         )
         # Format the plot
+
+        # Set the y limits
+        ax.set_ylim(ylim)
         # Label the x and y axes, units are integer day of year
         ax.set_xticks(ticks=xtick_locations, labels=xtick_labels, rotation=45)
         ax.tick_params(axis="x", direction="in", bottom=True, top=True)
@@ -347,7 +354,7 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
         plt.grid(which='major', axis='y', color='lightgrey', linestyle='-')
         # Add labels
         ax.set_ylabel('Temperature ($^\circ$C)')
-        ax.set_title(f'({subplot_letters[i]}) {STATION_NAMES[i]}')
+        ax.set_title(STATION_NAMES[i], loc='left')
         plt.tight_layout()
 
         # Save the plot
