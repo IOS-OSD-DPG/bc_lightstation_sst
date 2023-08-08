@@ -3,16 +3,38 @@
 Note: This site is underway. All figures are provisional.
 
 Make plots of British Columbia lightstation sea surface temperature (SST) anomalies and compute the linear trends and confidence limits. 
-Compute the monthly mean climatologies by subtracting monthly mean climatologies for 1991-2020 from the monthly mean 
+Compute the monthly mean anomalies by subtracting monthly mean climatologies for 1991-2020 from the monthly mean 
 observations.
 
 The data source for BC Lightstation Sea-surface Temperature and Salinity Data (Pacific), 1914-present, can be found [here](https://open.canada.ca/data/en/dataset/719955f2-bf8e-44f7-bc26-6bd623e82884).
 
+The BC Lightstation dataset is also available on [CIOOS Pacific](https://catalogue.cioospacific.ca/dataset/ca-cioos_654a4ece-7271-4f5a-ba60-b50a62dbd051), but it is not updated as frequently and does not have any data after Nov. 2019 (as of Aug. 2023).
+
 Processing order:
+1. convert_txt_to_csv.py
+   - May not be needed if csv-format data files are available
+   - Convert txt data files to csv file format for easier access with pandas
 1. lightstation_sst_climatology.py
-2. sst_monthly_mean_anomalies.py
+   - Monthly mean climatologies for each station for the period 1991-2020
+   - Does not need to be rerun if using the 1991-2020 climatologies
+2. sst_monthly_mean_anomalies.py 
+   - Compute monthly mean anomalies by subtracting monthly mean data from the 1991-2020 climatology
+3. trend_estimation.py (run via run_trend_estimation.py)
+   - Estimate the trends in SST anomalies using least-squares and Theil-Sen regression 
+   - Compute confidence intervals on the least-squares trends using the nonparametric Monte Carlo approach described by Cummins & Masson (2014)
 4. plot_lightstation_temperature.py
-5. trend_estimation.py
+   - `plot_data_gaps()` Data availability for each station for all time
+   - `plot_daily_filled_anomalies()` Data from most recent year plotted on top of average for all time for each station
+   - `plot_monthly_anomalies()` Least-squares and confidence intervals of time series anomalies
+   - `plot_daily_T_statistics()` Density of temperature and temperature anomalies by 30-year period (1994-2023, 1964-1993, 1934-1963, 1904-1933) with boxplots.
+   
+Mapping scripts:
+* get_lightstation_coords_from_txt.py: Get coordinates of lightstations from txt data files
+* map_lightstation_points.py: Make a Basemap plot showing the locations of each lightstation
+
+Other scripts:
+* lighthouse_sst_range_check.py: Check if all data are within the "accepted" range for coastal North Pacific sea-surface temperature, as defined by the NOAA World Ocean Database (WOD18; Garcia et al., 2018)
+* anomaly_method_differences.py: Compare the monthly mean anomaly values calculated from daily observations and from monthly mean observations
 
 <details>
 
