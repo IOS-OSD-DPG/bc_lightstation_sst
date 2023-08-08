@@ -1,6 +1,12 @@
 import pandas as pd
 import glob
 
+"""
+Print out lightstation coordinates from txt file data
+to use for map_lightstation_points.py.
+Put the coordinate data into ./data/coordinates.csv
+"""
+
 wdir = 'C:\\Users\\HourstonH\\Documents\\charles\\our_warming_ocean\\' \
        'lighthouse_data\\update_20230706\\raw_data\\'
 

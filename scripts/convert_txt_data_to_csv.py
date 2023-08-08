@@ -2,8 +2,9 @@ import pandas as pd
 import glob
 import os
 
-# Convert ".txt" data files received from the research scientist to .csv files (easier to work with)
-# Keep -999.99, -99.99 NA values for now...
+# Convert ".txt" data files received from the research scientist to .csv files
+# (easier to work with)
+# Keep -999.99, -99.99, -999.9 NA values for now...
 
 old_dir = os.getcwd()
 new_dir = os.path.dirname(old_dir)
