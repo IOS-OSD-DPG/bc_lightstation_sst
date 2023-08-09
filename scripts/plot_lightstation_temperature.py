@@ -161,12 +161,12 @@ def plot_data_gaps():
     Plot both 0s and 1s in the horizontal bar chart and plot the zeros as white so they don't show up
     :return:
     """
-    old_dir = os.getcwd()
-    new_dir = os.path.dirname(old_dir)
-    os.chdir(new_dir)
+    # old_dir = os.getcwd()
+    # new_dir = os.path.dirname(old_dir)
+    # os.chdir(new_dir)
 
     # Read in the data
-    raw_file_list = glob.glob(new_dir + '\\data\\monthly\\*MonthlyTemp.csv')
+    raw_file_list = glob.glob('.\\data\\monthly\\*MonthlyTemp.csv')
     if len(raw_file_list) == 0:
         print('Check suffix of raw files; empty file list returned')
         return
@@ -207,7 +207,6 @@ def plot_data_gaps():
     plt.savefig('.\\figures\\lightstation_data_gaps.png')
     plt.close(fig)
 
-    os.chdir(old_dir)
     return
 
 
@@ -1035,12 +1034,13 @@ def plot_daily_T_statistics():
     return
 
 
-def main(
+def run_plot(
         plot_monthly_anom: bool = False,
         plot_clim: bool = False,
         plot_daily_anom: bool = False,
         plot_daily_anom_window=None,
-        plot_daily_stats: bool = False
+        plot_daily_stats: bool = False,
+        plot_availability: bool = False
 ):
     old_dir = os.getcwd()
     new_dir = os.path.dirname(old_dir)
@@ -1080,6 +1080,9 @@ def main(
 
     if plot_daily_stats:
         plot_daily_T_statistics()
+
+    if plot_availability:
+        plot_data_gaps()
 
     os.chdir(old_dir)
     return
