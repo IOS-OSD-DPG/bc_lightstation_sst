@@ -2,6 +2,14 @@ import pandas as pd
 import glob
 import os
 
+"""
+Compare the anomaly values obtained from calculating monthly mean anomalies from
+1. daily data
+2. monthly mean data
+
+We ultimately went with the second option because that's consistent with other IOS projects.
+"""
+
 parent_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\our_warming_ocean\\' \
              'lighthouse_data\\'
 
@@ -38,4 +46,3 @@ for i in range(len(files1)):
         print('File mismatch !')
         print(os.path.basename(files1[i]))
         print(os.path.basename(files2[i]))
-
