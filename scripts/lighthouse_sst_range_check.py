@@ -3,6 +3,11 @@ import pandas as pd
 import glob
 from os.path import basename
 
+"""
+Use the range check for Coastal North Pacific sea-surface temperature from
+the NOAA World Ocean Database (WOD, 2018)
+"""
+
 COAST_N_PAC_RANGE_0m = (-2.10, 35.00)  # degrees C
 
 parent_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\our_warming_ocean\\lighthouse_data\\'
