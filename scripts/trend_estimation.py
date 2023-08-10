@@ -180,7 +180,7 @@ def nans_to_strip(abridged: bool):
     return nstrip
 
 
-def treat_nans(x: np.ndarray, y: np.ndarray, nstart: int, nend: int):
+def treat_nans(x: np.ndarray, y: np.ndarray, nstart: int, nend: int) -> tuple:
     """
     From Patrick Cummins Matlab script
     Use first-order spline interpolation to fill gaps in lightstation SST data
@@ -239,8 +239,8 @@ def main_te(compute_cis=False, delta_tau_factor=1, nlag_vals_to_use=50):
         # Reformat dataframe into 1d with float type date
         x, y = flatten_dframe(dframe)
 
-        xx_gaps, yy_gaps, xx, yy_filled = treat_nans(x, y, nstrip[data_file_idx, 0],
-                                                     nstrip[data_file_idx, 1])
+        xx, yy_filled = treat_nans(x, y, nstrip[data_file_idx, 0],
+                                   nstrip[data_file_idx, 1])
 
         # Set up parameters for analysis
         NN = len(yy_filled)
@@ -689,8 +689,12 @@ def calc_trend(search_string: str, max_siml=None, ncores_to_use=None,
             if N[n] <= alim_high < N[n + 1]:
                 temp_conf_int_high = 0.5 * (bin_edges[n] + bin_edges[n + 1])
 
-        temp_conf_int_95 = 0.5 * (-temp_conf_int_low + temp_conf_int_high)
-        conf_int_century = temp_conf_int_95 * 100  # Convert from deg C/year to deg C/century
+        try:
+            temp_conf_int_95 = 0.5 * (-temp_conf_int_low + temp_conf_int_high)
+            conf_int_century = temp_conf_int_95 * 100  # Convert from deg C/year to deg C/century
+        except NameError:
+            print("Confidence bounds not found! Exiting")
+            return
 
         df_res.loc[station_name] = [trend_century_ols_entire, trend_century_ols_abridged,
                                     trend_century_sen, conf_int_century, y_intercept_ols]
@@ -705,7 +709,7 @@ def calc_trend(search_string: str, max_siml=None, ncores_to_use=None,
     if sen_flag == 1:
         regression_type = 'st'  # Theil-Sen
     else:
-        regression_type = 'st_cummins'
+        regression_type = 'st_cummins'  # Cummins Masson 2014
 
     # Save to the repo directory eventually
     # Export the results to a CSV file
