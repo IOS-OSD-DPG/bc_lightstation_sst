@@ -716,7 +716,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # Suppress legend since it's in the time series plot
     # Have to reverse dataframe order to plot newest data in front
-    color_end = 3-len(year_ranges)-1 if 3 > len(year_ranges) else None
+    color_end = 3-len(year_ranges) if 3 >= len(year_ranges) else None
     sns.kdeplot(df.loc[::-1, :], x=var, hue='Year Range', fill=True,
                 legend=False, ax=ax,
                 palette=sns.color_palette()[3:color_end:-1])
@@ -866,11 +866,14 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # Reset x and y axis limits
     if var == 'Temperature(C)':
-        ax.set_xlim(0, 25)
+        ax.set_xlim(0, 27)
     elif var == 'Temperature Anomaly(C)':
         ax.set_xlim(-8, 8)
 
     ax.set_ylim(*ylim)  # Use * to unpack a tuple
+
+    # # Add buffer to y axis
+    # ax.margins(y=0.1)
 
     # Add subplot title with padding so it doesn't overlap with table above plot
     title_pad = len(df_stats) * 10 + 20
@@ -999,7 +1002,8 @@ def plot_daily_T_statistics():
                      markerfacecolor=colours[4 - len(year_ranges) + k])
         plt.grid(which='major', axis='both', color='lightgrey')
         ax1.legend(loc='upper left', ncol=2)
-        ax1.set_ylim((0, 25))
+        ax1.set_ylim((0, 27))
+        ax1.margins(y=0.1)
         ax1.set_ylabel('Temperature ($^\circ$C)')
         # # Increase x tick frequency to every 10 years
         # xticks = ax1.get_xticks()
@@ -1055,13 +1059,20 @@ def run_plot(
         input_folder + '\\*monthly_anom_from_monthly_mean.csv',
         recursive=False
     )
-    anom_files.sort()
+    if len(anom_files) == 0:
+        print('No anomaly files returned with suffix monthly_anom_from_monthly_mean.csv',
+              'in directory', input_folder, '; exiting !')
+    else:
+        anom_files.sort()
 
     # Get trends and confidence intervals file
     monte_carlo_results = os.path.join(
         input_folder,
         "monte_carlo_max_siml50000_ols_st_cummins.csv"
     )
+
+    if plot_availability:
+        plot_data_gaps()
 
     if plot_monthly_anom:
         for stn, f in zip(STATION_NAMES, anom_files):
@@ -1080,9 +1091,6 @@ def run_plot(
 
     if plot_daily_stats:
         plot_daily_T_statistics()
-
-    if plot_availability:
-        plot_data_gaps()
 
     os.chdir(old_dir)
     return
