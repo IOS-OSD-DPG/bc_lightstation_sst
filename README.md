@@ -1,6 +1,9 @@
 ## bc_lightstation_sst
 
-Note: This site is underway. All figures are provisional.
+Data page for BC lightstation sea-surface temperature data. The webpage can be found 
+[here](https://ios-osd-dpg.github.io/bc_lightstation_sst/) and not at the github-pages link (which incorrectly points to the previous repository owner).
+This site is updated twice a year. All figures are provisional.
+
 
 Make plots of British Columbia lightstation sea surface temperature (SST) anomalies and compute the linear trends and confidence limits. 
 Compute the monthly mean anomalies by subtracting monthly mean climatologies for 1991-2020 from the monthly mean 
