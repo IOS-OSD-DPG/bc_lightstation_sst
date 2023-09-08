@@ -153,7 +153,7 @@ def plot_monthly_anomalies(anom_file: str, station_name: str, plot_name: str, be
     return
 
 
-def plot_data_gaps():
+def plot_data_gaps(suffix: str):
     """
     Make a bar-like plot showing where there are gaps in each lightstations' record
     Follow
@@ -167,26 +167,30 @@ def plot_data_gaps():
     # os.chdir(new_dir)
 
     # Read in the data
-    raw_file_list = glob.glob('.\\data\\monthly\\*MonthlyTemp.csv')
+    raw_file_list = glob.glob(f'.\\data\\monthly\\*{suffix}')
     if len(raw_file_list) == 0:
         print('Check suffix of raw files; empty file list returned')
         return
     raw_file_list.sort(reverse=True)
 
-    min_year, max_year = [1921, 2023]
+    min_year, max_year = [1914, 2023]
 
     # Make the plot
     fig = plt.figure(figsize=(8, 4))
     ax = fig.add_subplot()
 
     for i in range(len(raw_file_list)):
-        df = pd.read_csv(raw_file_list[i], index_col='Year',
-                         na_values=[99.99, 999.9, 999.99])
+        try:
+            df = pd.read_csv(raw_file_list[i], index_col='Year',
+                             na_values=[99.99, 999.9, 999.99])
+        except ValueError:
+            df = pd.read_csv(raw_file_list[i], skiprows=1, index_col='YEAR',
+                             na_values=[99.99, 999.9, 999.99])
         # Flatten the dataframe
         date, sst = flatten_dframe(df)
         # Make a mask from the dataframe using ~pd.isna(df)
         mask = ~pd.isna(sst)
-        sst_here = np.ones(sum(mask)) * (2 * i)
+        sst_here = np.ones(sum(mask)) * (2 * i)  # single y value to plot the availability at
         # Plot the data with vline marker (square 's' marker too big?)
         # Change marker opacity with alpha
         ax.scatter(date[mask], sst_here, marker='|', s=10, color='b')
@@ -202,7 +206,7 @@ def plot_data_gaps():
     new_xticks = np.arange(old_xticks[0], old_xticks[-2] + 1, 10, dtype=int)
     ax.set_xticks(new_xticks)
     ax.set_xticklabels(ax.get_xticks(), rotation=45)
-    ax.set_xlim((min_year - 2, max_year + 25))
+    ax.set_xlim((min_year - 2, max_year + 28))  # just to get the spacing right with the text
     plt.tight_layout()
 
     plt.savefig('.\\figures\\lightstation_data_gaps.png')
@@ -581,7 +585,7 @@ def plot_filled_sst_resid(anom_file: str, all_time_mean: float, plot_name: str):
     return
 
 
-def plot_filled_daily_sst(daily_file, plot_name):
+def plot_filled_daily_sst_deprec(daily_file, plot_name):
     """
     Translated from Peter Chandler's matlab script. Use daily SST data to plot
     365-day rolling averaged SST anomalies and compute and plot a OLS line below the curve.
@@ -1131,7 +1135,7 @@ def run_plot(
     )
 
     if availability:
-        plot_data_gaps()
+        plot_data_gaps(suffix='.csv')
 
     if monthly_anom:
         for stn, f in zip(STATION_NAMES, anom_files):
