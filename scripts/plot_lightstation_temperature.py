@@ -13,8 +13,9 @@ from blume.table import table
 
 STATION_NAMES = [
     "Amphitrite Point", "Bonilla Island", "Chrome Island",
-    "Entrance Island", "Kains Island",
-    "Langara Island", "Pine Island", "Race Rocks"
+    "Departure Bay", "Egg Island", "Entrance Island", "Kains Island",
+    "Langara Island", "McInnes Island", "Nootka Point", "Pine Island",
+    "Race Rocks"
 ]
 MONTH_ABBREV = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
                 'Oct', 'Nov', 'Dec']
@@ -210,7 +211,7 @@ def plot_data_gaps():
     return
 
 
-def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
+def plot_daily_filled_anomalies(year: int, suffix: str, do_smooth: bool, window=None):
     """
     Plot the most recent year's raw data on top of the daily average of all time
     for each station
@@ -227,16 +228,16 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
     new_dir = os.getcwd()
 
     # Use daily data instead of monthly mean observations
-    daily_file_list = glob.glob(new_dir + '\\data\\daily\\*.txt')
+    daily_file_list = glob.glob(new_dir + f'\\data\\daily\\*{suffix}')
     if len(daily_file_list) == 0:
         print('Check suffix of raw files; empty file list returned')
         return
     daily_file_list.sort()
 
-    final_daily_list = []
-    for elem in daily_file_list:
-        if all([nm not in elem for nm in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
-            final_daily_list.append(elem)
+    final_daily_list = daily_file_list
+    # for elem in daily_file_list:
+    #     if all([nm not in elem for nm in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
+    #         final_daily_list.append(elem)
 
     if len(final_daily_list) != len(STATION_NAMES):
         print('List of daily data files does not match length of STATION_NAMES global variable! Exiting')
@@ -262,8 +263,20 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
 
     for i in range(len(final_daily_list)):
         # Read in fixed width file
-        df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
-                             na_values=[99.99, 999.9, 999.99])
+        if suffix.endswith('txt'):
+            df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
+                                 na_values=[99.99, 999.9, 999.99])
+            temperature_colname = 'Temperature(C)'
+        elif suffix.endswith('csv'):
+            df_obs = pd.read_csv(final_daily_list[i], skiprows=1,
+                                 na_values=[99.99, 999.9, 999.99])
+            df_obs['Year'] = [x[:4] for x in df_obs['DATE (YYYY-MM-DD)']]
+            df_obs['Month'] = [x[5:7] for x in df_obs['DATE (YYYY-MM-DD)']]
+            df_obs['Day'] = [x[8:10] for x in df_obs['DATE (YYYY-MM-DD)']]
+            temperature_colname = 'TEMPERATURE ( C )'
+        else:
+            print('Suffix', suffix, 'not supported; exiting !')
+            return
 
         # Convert the year-month-day columns into floats
         df_obs['Datetime'] = pd.to_datetime(df_obs.loc[:, ['Year', 'Month', 'Day']])
@@ -280,16 +293,15 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
             print(f"No data available from {STATION_NAMES[i]} in year {year}; skipping")
             continue
 
-        # Compute the average of all observations for each day of the year
+        # Compute the average of all observations for each day of the year (not just avg over 1991-2020)
         # Initialize an array to hold the daily climatological values
         daily_clim = pd.Series(data=days_per_year, dtype=float)
 
         # Populate the array with mean values
         for k in range(1, days_per_year + 1):
             daily_clim.loc[k - 1] = df_obs.loc[
-                df_obs['Datetime'].dt.dayofyear == k, 'Temperature(C)'
+                df_obs['Datetime'].dt.dayofyear == k, temperature_colname
             ].mean(skipna=True)
-
         if do_smooth:
             # Use 21-day rolling average as default
             if window is None:
@@ -323,9 +335,9 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
         ax.fill_between(
             df_obs.loc[mask_year, 'Datetime'].dt.dayofyear,
             clim_to_plot.loc[:last_dayofyear - 1],  # -1 because indexing starts at zero
-            df_obs.loc[mask_year, 'Temperature(C)'],
+            df_obs.loc[mask_year, temperature_colname],
             where=(
-                    df_obs.loc[mask_year, 'Temperature(C)'].to_numpy() >
+                    df_obs.loc[mask_year, temperature_colname].to_numpy() >
                     clim_to_plot.loc[:last_dayofyear - 1].to_numpy()
             ),
             color='r'
@@ -333,9 +345,9 @@ def plot_daily_filled_anomalies(year: int, do_smooth: bool, window=None):
         ax.fill_between(
             df_obs.loc[mask_year, 'Datetime'].dt.dayofyear,
             clim_to_plot.loc[:last_dayofyear - 1],
-            df_obs.loc[mask_year, 'Temperature(C)'],
+            df_obs.loc[mask_year, temperature_colname],
             where=(
-                    df_obs.loc[mask_year, 'Temperature(C)'].to_numpy() <
+                    df_obs.loc[mask_year, temperature_colname].to_numpy() <
                     clim_to_plot.loc[:last_dayofyear - 1].to_numpy()
             ),
             color='b'
@@ -741,7 +753,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # Suppress legend since it's in the time series plot
     # Have to reverse dataframe order to plot newest data in front
-    color_end = 3-len(year_ranges_density_plot) if 3 >= len(year_ranges_density_plot) else None
+    color_end = 3 - len(year_ranges_density_plot) if 3 >= len(year_ranges_density_plot) else None
     sns.kdeplot(df_density_plot.loc[::-1, :], x=var, hue='Year Range', fill=True,
                 legend=False, ax=ax, palette=sns.color_palette()[3:color_end:-1])
     # Add a light grey grid behind the curves
@@ -801,7 +813,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
                 #     for k in range(len(year_ranges))
                 # ],
                 cellColours=[
-                    [sns.color_palette('pastel')[4-len(year_ranges):4][k]] * ncols
+                    [sns.color_palette('pastel')[4 - len(year_ranges):4][k]] * ncols
                     for k in range(len(year_ranges))
                 ],
                 colColours=[sns.color_palette('pastel')[-3]] * ncols,  # grey for column headers
@@ -1134,7 +1146,8 @@ def run_plot(
         plot_climatology(clim_file=clim_file, output_dir=output_folder)
 
     if daily_anom:
-        plot_daily_filled_anomalies(2023, do_smooth=True, window=daily_anom_window)
+        plot_daily_filled_anomalies(2023, do_smooth=True, window=daily_anom_window,
+                                    suffix='.csv')
 
     if daily_stats:
         plot_daily_T_statistics()
