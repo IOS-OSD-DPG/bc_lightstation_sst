@@ -710,16 +710,40 @@ def sst_all_time_mean(monthly_mean_file):
 
 def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
                          year_ranges: list):
+    """
+    Make density subplot using seaborn with an accompanying statistics table
+    :param ax:
+    :param df: data
+    :param var: variable
+    :param year_ranges: list of 30-year chunks for separating the data into for statistics
+    :return:
+    """
     # Column names for statistic tables
     stat_table_cols = ['Time Period', 'Mean', 'Median', 'Skewness', 'Min',
                        'Max', 'SD', '25%ile', '75%ile']
 
+    # Do a second check that there are enough data for density plot (10+ years)
+    # Don't apply this to the stats table though !
+    mask_density_plot = np.repeat(True, len(df))
+    year_ranges_density_plot = []
+    if int(year_ranges[0][-4:]) - int(year_ranges[0][:4]) < 10:
+        mask_density_plot[df.loc[:, 'Year Range'] == year_ranges[0]] = False
+    else:
+        year_ranges_density_plot.append(year_ranges[0])
+
+    for i in range(1, len(year_ranges)):
+        year_ranges_density_plot.append(year_ranges[i])
+
+    print(np.nanmin(df.loc[:, 'Year']))
+    print('year ranges for density plot:', year_ranges_density_plot)
+
+    df_density_plot = df.loc[mask_density_plot, :]
+
     # Suppress legend since it's in the time series plot
     # Have to reverse dataframe order to plot newest data in front
-    color_end = 3-len(year_ranges) if 3 >= len(year_ranges) else None
-    sns.kdeplot(df.loc[::-1, :], x=var, hue='Year Range', fill=True,
-                legend=False, ax=ax,
-                palette=sns.color_palette()[3:color_end:-1])
+    color_end = 3-len(year_ranges_density_plot) if 3 >= len(year_ranges_density_plot) else None
+    sns.kdeplot(df_density_plot.loc[::-1, :], x=var, hue='Year Range', fill=True,
+                legend=False, ax=ax, palette=sns.color_palette()[3:color_end:-1])
     # Add a light grey grid behind the curves
     ax.set_axisbelow(True)
     plt.grid(which='major', axis='both', color='lightgrey')
@@ -802,6 +826,13 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
         columns=['Year Range', 'Mean', 'Median', 'Skew', 'Min', 'Max',
                  'STD', '25%ile', '75%ile']
     )
+
+    # Remove first year range in box plots if it's too short
+    for i, yr in enumerate(year_ranges):
+        if yr not in year_ranges_density_plot:
+            df_stats.drop(index=i, inplace=True)
+            df_stats.reset_index(drop=True, inplace=True)
+
     # Change datatype from string to float, except for Year Range column
     for col in df_stats.columns[1:]:
         df_stats.loc[:, col] = [float(x) for x in df_stats[col]]
@@ -830,8 +861,8 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
     df_whiskers = pd.DataFrame(
         columns=['Year Range', 'minmax', 'quantiles', 'y values'])
 
-    for i in range(len(year_ranges)):
-        yr = year_ranges[i]
+    for i in range(len(year_ranges_density_plot)):
+        yr = year_ranges_density_plot[i]
         # Add a row for min and 25%ile
         df_whiskers.loc[len(df_whiskers)] = [
             yr,
@@ -876,7 +907,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
     # ax.margins(y=0.1)
 
     # Add subplot title with padding so it doesn't overlap with table above plot
-    title_pad = len(df_stats) * 10 + 20
+    title_pad = len(cellText) * 10 + 20
     if var == 'Temperature(C)':
         ax.set_title('Density of Temperature Observations', loc='left',
                      pad=title_pad)
@@ -960,11 +991,14 @@ def plot_daily_T_statistics():
             yr = year_ranges_all[k]
             st = int(yr.split('-')[0])
             en = int(yr.split('-')[1])
-
-            if len(df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range']) > 0:
+            # Proceed if there are data from the select year range
+            obs_exist_from_year_range = len(df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range']) > 0
+            # min_years_in_range = 10  # short enough to capture 1920's data at Race Rocks
+            # enough_years_in_year_range = np.nanmin(df_obs.loc[:, 'Year']) - st > min_years_in_range
+            if obs_exist_from_year_range:  # & enough_years_in_year_range:
                 if st < int(df_obs['Year'].min()):
                     st = int(df_obs['Year'].min())
-                    year_ranges_all[k] = str(st) + '-' + year_ranges_all[k].split('-')[1]
+                    year_ranges_all[k] = str(st) + '-' + yr.split('-')[1]
                     yr = year_ranges_all[k]
                 # Populate the Year Range column
                 df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range'] = yr
@@ -1039,12 +1073,12 @@ def plot_daily_T_statistics():
 
 
 def run_plot(
-        plot_monthly_anom: bool = False,
-        plot_clim: bool = False,
-        plot_daily_anom: bool = False,
-        plot_daily_anom_window=None,
-        plot_daily_stats: bool = False,
-        plot_availability: bool = False
+        monthly_anom: bool = False,
+        clim: bool = False,
+        daily_anom: bool = False,
+        daily_anom_window=None,
+        daily_stats: bool = False,
+        availability: bool = False
 ):
     old_dir = os.getcwd()
     new_dir = os.path.dirname(old_dir)
@@ -1071,25 +1105,25 @@ def run_plot(
         "monte_carlo_max_siml50000_ols_st_cummins.csv"
     )
 
-    if plot_availability:
+    if availability:
         plot_data_gaps()
 
-    if plot_monthly_anom:
+    if monthly_anom:
         for stn, f in zip(STATION_NAMES, anom_files):
             png_filename = os.path.join(
                 output_folder, stn.replace(' ', '_') + '_monthly_mean_sst_anomalies_ols.png'
             )
             plot_monthly_anomalies(f, stn, png_filename, best_fit=monte_carlo_results)
 
-    if plot_clim:
+    if clim:
         clim_file = os.path.join(
             input_folder, 'lighthouse_sst_climatology_1991-2020.csv')
         plot_climatology(clim_file=clim_file, output_dir=output_folder)
 
-    if plot_daily_anom:
-        plot_daily_filled_anomalies(2023, do_smooth=True, window=plot_daily_anom_window)
+    if daily_anom:
+        plot_daily_filled_anomalies(2023, do_smooth=True, window=daily_anom_window)
 
-    if plot_daily_stats:
+    if daily_stats:
         plot_daily_T_statistics()
 
     os.chdir(old_dir)
