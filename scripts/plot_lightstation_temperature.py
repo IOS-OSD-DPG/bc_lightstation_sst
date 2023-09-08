@@ -492,7 +492,7 @@ def plot_climatology(clim_file, output_dir):
     month_numbers = np.arange(1, 12 + 1)
 
     fig, ax = plt.subplots(figsize=[6, 4.5])  # width, height
-    line_styles = ['-', ':', '--'] * 3
+    line_styles = ['-', ':', '--'] * 4
     # line_styles.sort()
     for i in range(len(clim_df)):
         station = clim_df.index[i]
@@ -500,7 +500,7 @@ def plot_climatology(clim_file, output_dir):
         ax.plot(month_numbers, clim_df.loc[station, :],
                 label=station_name, marker='.', linestyle=line_styles[i])
 
-    plt.legend()
+    plt.legend(fontsize='small', frameon=True)
     ax.set_xlim((min(month_numbers), max(month_numbers)))
     ax.set_xticks(month_numbers, labels=MONTH_ABBREV, rotation=45)
     ax.set_ylabel('Temperature ($^\circ$C)')
@@ -1080,6 +1080,19 @@ def run_plot(
         daily_stats: bool = False,
         availability: bool = False
 ):
+    """
+    Run plotting functions
+    :param monthly_anom: Plot monthly anomalies with least-squares trend
+    and Monte Carlo 95% confidence interval
+    :param clim: Plot monthly climatologies
+    :param daily_anom: plot daily anomalies
+    :param daily_anom_window: the size of window to use for plotting daily
+    anomalies, if smoothing them
+    :param daily_stats: plot statistics of daily data
+    :param availability: plot data availability (monthly and annual observation
+    counts)
+    :return:
+    """
     old_dir = os.getcwd()
     new_dir = os.path.dirname(old_dir)
     os.chdir(new_dir)
