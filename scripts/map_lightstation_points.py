@@ -12,6 +12,9 @@ point_file = '.\\data\\coordinates.csv'
 
 df = pd.read_csv(point_file, index_col=[0])
 
+# Add column containing abbreviation of each station name
+df['Name_abbrev'] = [n[0] + n.split(' ')[1][0] for n in df.index]
+
 # Initialize plot
 fig, ax = plt.subplots()
 
@@ -41,7 +44,15 @@ m.scatter(x, y, marker='o', color='r', s=10, zorder=5)
 # https://stackoverflow.com/questions/59740782/labelling-multiple-points-from-csv-in-basemap
 pad = ' '
 for i in range(len(df.index)):
-    ax.annotate(pad + df.index[i], (x[i], y[i]))
+    if df.index[i] == 'Departure Bay':
+        # Flip the text so the data point is on its right instead of its left
+        ax.annotate(df.index[i], (x[i], y[i]), xytext=(-64, -37), textcoords='offset points',
+                    fontsize=8, rotation=30)
+        pass
+    elif df.index[i] == 'Langara Island':
+        ax.annotate('Langara\nIsland', (x[i], y[i]), fontsize=8, rotation=30)
+    else:
+        ax.annotate(pad + df.index[i], (x[i], y[i]), fontsize=8, rotation=30)
 
 # Plot formatting
 plot_name = '.\\figures\\lightstation_map.png'
