@@ -163,16 +163,20 @@ def nans_to_strip(abridged: bool):
     and if the list of stations being analyzed changes!
     """
     # Number of stations being analyzed
-    N = 8
+    N = 12
     nstrip = np.zeros((N, 2), dtype=int)
     nstrip[0, :] = [7, 9]  # Amphitrite  ,8
     nstrip[1, :] = [3, 9]  # Bonilla ,8
     nstrip[2, :] = [3, 2]  # Chrome ,8, doesn't have 2023 data yet
-    nstrip[3, :] = [4, 48]  # Entrance to Dec 2019
-    nstrip[4, :] = [0, 9]  # Kains
-    nstrip[5, :] = [50, 9]  # Langara starting Mar 1940
-    nstrip[6, :] = [0, 9]  # Pine ,8
-    nstrip[7, :] = [1, 9]  # Race Rocks  ,8
+    nstrip[3, :] = [9, 6]  # Departure Bay
+    nstrip[4, :] = [2, 6]  # Egg Island
+    nstrip[5, :] = [4, 48]  # Entrance to Dec 2019
+    nstrip[6, :] = [0, 9]  # Kains
+    nstrip[7, :] = [50, 9]  # Langara starting Mar 1940
+    nstrip[8, :] = [6, 6]  # McInnes Island
+    nstrip[9, :] = [7, 6]  # Nootka Point, including data before the big gap
+    nstrip[10, :] = [0, 9]  # Pine ,8
+    nstrip[11, :] = [1, 9]  # Race Rocks  ,8
 
     if not abridged:
         nstrip[3, :] = [4, 9]  # Entrance to Mar 2023
