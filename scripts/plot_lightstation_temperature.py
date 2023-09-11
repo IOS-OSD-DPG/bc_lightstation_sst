@@ -392,9 +392,9 @@ def get_record_st_en(df: pd.DataFrame):
     Get the start and end month and year of the full data record.
     Assume that any 999.99, etc. values have been read in as NaNs
     """
-    st_mth = df.columns[~df.isna().iloc[0, :]][0]
+    st_mth = df.columns[~df.isna().iloc[0, :]][0].capitalize()
     st_yr = df.index[0]
-    en_mth = df.columns[~df.isna().iloc[len(df) - 1, :]][-1]
+    en_mth = df.columns[~df.isna().iloc[len(df) - 1, :]][-1].capitalize()
     en_yr = df.index[-1]
     return st_mth, st_yr, en_mth, en_yr
 
@@ -408,19 +408,17 @@ def multi_trend_table_image():
     everywhere
     :return:
     """
-    old_dir = os.getcwd()
-    new_dir = os.path.dirname(old_dir)
-    os.chdir(new_dir)
+    new_dir = os.getcwd()
 
     analysis_dir = os.path.join(new_dir, 'analysis')
     figures_dir = os.path.join(new_dir, 'figures')
     data_dir = os.path.join(new_dir, 'data', 'monthly')
 
     # Get file containing new trends
-    new_trend_file = './analysis/monte_carlo_max_siml50000_ols_st_cummins.csv'
+    new_trend_file = os.path.join(analysis_dir, 'monte_carlo_max_siml50000_ols_st_cummins.csv')
     df_new_trend = pd.read_csv(new_trend_file)
 
-    cm2014_file = './analysis/cummins_masson_2014_trends.csv'
+    cm2014_file = os.path.join(analysis_dir, 'cummins_masson_2014_trends.csv')
     cm2014_df = pd.read_csv(cm2014_file)
 
     # Make a dataframe to print to an image containing the analysis period
@@ -440,15 +438,16 @@ def multi_trend_table_image():
         '', len(df_img))
 
     # Get the raw data in csv format
-    raw_files = glob.glob(data_dir + '/*MonthlyTemp.csv')
-    if len(raw_files) == 0:
-        print('No monthly temperature data files found; try a different search key')
-        return
+    # raw_files = glob.glob(data_dir + '/*MonthlyTemp.csv')
+    # if len(raw_files) == 0:
+    #     print('No monthly temperature data files found; try a different search key')
+    #     return
+    raw_files = glob.glob(data_dir + '/*Average_Monthly_Sea_Surface_Temperature*.csv')
     raw_files.sort()
 
     # Iterate through all the files
     for i in range(len(raw_files)):
-        df_in = pd.read_csv(raw_files[i], index_col='Year',
+        df_in = pd.read_csv(raw_files[i], skiprows=1, index_col='YEAR',
                             na_values=[99.99, 999.9, 999.99])
 
         # Get the start and end month and year of analysis period
@@ -498,8 +497,6 @@ def multi_trend_table_image():
         index=True
     )
 
-    # Change the current directory back
-    os.chdir(old_dir)
     return
 
 
@@ -1090,6 +1087,7 @@ def plot_daily_T_statistics():
 
 def run_plot(
         monthly_anom: bool = False,
+        monthly_table: bool = False,
         clim: bool = False,
         daily_anom: bool = False,
         daily_anom_window=None,
@@ -1100,6 +1098,7 @@ def run_plot(
     Run plotting functions
     :param monthly_anom: Plot monthly anomalies with least-squares trend
     and Monte Carlo 95% confidence interval
+    :param monthly_table: Save table of monthly mean trends in anomalies in PNG and CSV formats
     :param clim: Plot monthly climatologies
     :param daily_anom: plot daily anomalies
     :param daily_anom_window: the size of window to use for plotting daily
@@ -1143,6 +1142,9 @@ def run_plot(
                 output_folder, stn.replace(' ', '_') + '_monthly_mean_sst_anomalies_ols.png'
             )
             plot_monthly_anomalies(f, stn, png_filename, best_fit=monte_carlo_results)
+
+    if monthly_table:
+        multi_trend_table_image()
 
     if clim:
         clim_file = os.path.join(

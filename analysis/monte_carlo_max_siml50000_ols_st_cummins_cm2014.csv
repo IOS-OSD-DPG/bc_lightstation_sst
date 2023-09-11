@@ -1,10 +1,14 @@
 ,C&M (2014),C&M (2014),New,New
 ,Analysis period,Least-squares trend in C/century,Analysis period,Least-squares (Theil-Sen) trend in C/century
-Amphitrite Point,Jan 1935 - Dec 2012,0.71 +/- 0.53,Aug 1934 - Mar 2023,0.83 (0.85) +/- 0.35
-Bonilla Island,Jan 1960 - Dec 2012,0.72 +/- 0.95,Apr 1960 - Mar 2023,1.03 (0.94) +/- 0.53
+Amphitrite Point,Jan 1935 - Dec 2012,0.71 +/- 0.53,Aug 1934 - Jun 2023,0.81 (0.83) +/- 0.35
+Bonilla Island,Jan 1960 - Dec 2012,0.72 +/- 0.95,Apr 1960 - Jun 2023,0.99 (0.90) +/- 0.53
 Chrome Island,Jan 1963 - Dec 2012,3.38 +/- 0.91,Apr 1961 - Oct 2022,2.58 (2.53) +/- 1.03
-Entrance Island,Jan 1937 - Dec 2012,1.32 +/- 0.96,May 1936 - Mar 2023,1.28 (1.26) +/- 0.87
-Kains Island,Jan 1935 - Dec 2012,0.43 +/- 0.74,Jan 1935 - Mar 2023,0.77 (0.78) +/- 0.59
-Langara Island,Jan 1940 - Dec 2012,0.75 +/- 0.86,Oct 1936 - Mar 2023,0.83 (0.78) +/- 0.63
+Departure Bay,-,-,Jan 1914 - Jun 2023,0.61 (0.59) +/- 0.48
+Egg Island,-,-,Mar 1970 - Jun 2023,1.29 (1.29) +/- 0.99
+Entrance Island,Jan 1937 - Dec 2012,1.32 +/- 0.96,May 1936 - Jun 2023,1.28 (1.26) +/- 0.87
+Kains Island,Jan 1935 - Dec 2012,0.43 +/- 0.74,Jan 1935 - Jun 2023,0.75 (0.77) +/- 0.59
+Langara Island,Jan 1940 - Dec 2012,0.75 +/- 0.86,Oct 1936 - Mar 2023,0.85 (0.79) +/- 0.63
+McInnes Island,-,-,Jul 1954 - Jun 2023,0.98 (0.97) +/- 0.59
+Nootka Point,-,-,Jan 1934 - Jun 2023,0.92 (0.93) +/- 0.73
 Pine Island,Jan 1937 - Dec 2012,0.74 +/- 0.81,Jan 1937 - Mar 2023,1.26 (1.19) +/- 0.67
 Race Rocks,Jan 1942 - Dec 2012,1.39 +/- 0.68,Feb 1921 - Mar 2023,0.78 (0.80) +/- 0.57
