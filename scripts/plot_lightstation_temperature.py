@@ -17,8 +17,10 @@ STATION_NAMES = [
     "Langara Island", "McInnes Island", "Nootka Point", "Pine Island",
     "Race Rocks"
 ]
-MONTH_ABBREV = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-                'Oct', 'Nov', 'Dec']
+MONTH_ABBREV = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
+    'Oct', 'Nov', 'Dec'
+]
 
 
 def lstq_model(anom_1d, date_numeric_1d):
@@ -155,7 +157,7 @@ def plot_monthly_anomalies(anom_file: str, station_name: str, plot_name: str, be
 
 def plot_data_gaps(suffix: str):
     """
-    Make a bar-like plot showing where there are gaps in each lightstations' record
+    Make a bar-like plot showing where there are gaps in each lightstations' monthly record
     Follow
     https://matplotlib.org/stable/gallery/lines_bars_and_markers/horizontal_barchart_distribution.html#sphx-glr-gallery-lines-bars-and-markers-horizontal-barchart-distribution-py
     Make mask of 0s and 1s based on whether there is a measurement
@@ -930,23 +932,23 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
     return
 
 
-def plot_daily_T_statistics():
+def plot_daily_T_statistics(suffix: str):
     """
     Plot daily SST and anomaly density curves with statistics tables
     :return:
     """
     # Divide the data into 30-year chunks working backwards
-    daily_file_list = glob.glob('.\\data\\daily\\*.txt')
+    daily_file_list = glob.glob(f'.\\data\\daily\\*{suffix}')
     if len(daily_file_list) == 0:
         print('Check suffix of raw files; empty file list returned')
         return
     daily_file_list.sort()
 
     # Remove stations we don't want
-    final_daily_list = []
-    for elem in daily_file_list:
-        if all([nm not in elem for nm in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
-            final_daily_list.append(elem)
+    final_daily_list = daily_file_list
+    # for elem in daily_file_list:
+    #     if all([nm not in elem for nm in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
+    #         final_daily_list.append(elem)
 
     # Check on number of files remaining
     if len(final_daily_list) != len(STATION_NAMES):
@@ -964,12 +966,17 @@ def plot_daily_T_statistics():
     for i in range(len(final_daily_list)):
         print(os.path.basename(final_daily_list[i]))
         # Read in fixed width file
-        df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
+        # df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
+        #                      na_values=[99.99, 999.9, 999.99])
+        df_obs = pd.read_csv(final_daily_list[i], skiprows=1,
                              na_values=[99.99, 999.9, 999.99])
 
         # Compute all-time daily means and use to get anomalies
 
         # Convert the year-month-day columns into floats
+        df_obs['Year'] = [int(x[:4]) for x in df_obs['DATE (YYYY-MM-DD)']]
+        df_obs['Month'] = [int(x[5:7]) for x in df_obs['DATE (YYYY-MM-DD)']]
+        df_obs['Day'] = [int(x[8:10]) for x in df_obs['DATE (YYYY-MM-DD)']]
         df_obs['Datetime'] = pd.to_datetime(df_obs.loc[:, ['Year', 'Month', 'Day']])
         # df_obs['Float_year'] = df_obs['Datetime'].dt.dayofyear / days_per_year + df_obs['Year']
 
@@ -977,6 +984,9 @@ def plot_daily_T_statistics():
         # Initialize an array to hold the daily climatological values
         daily_clim = pd.Series(data=days_per_year, dtype=float)
 
+        # Rename temperature column
+        if 'TEMPERATURE ( C )' in df_obs.columns:
+            df_obs.rename(columns={'TEMPERATURE ( C )': 'Temperature(C)'}, inplace=True)
         # Initialize column for anomalies
         df_obs['Temperature Anomaly(C)'] = np.zeros(len(df_obs))
 
@@ -1112,6 +1122,9 @@ def run_plot(
     new_dir = os.path.dirname(old_dir)
     os.chdir(new_dir)
 
+    daily_file_suffix = '.csv'
+    monthly_file_suffix = '.csv'
+
     # Plot climatological monthly means at each station
     output_folder = os.path.join(new_dir, 'figures')
 
@@ -1134,7 +1147,7 @@ def run_plot(
     )
 
     if availability:
-        plot_data_gaps(suffix='.csv')
+        plot_data_gaps(suffix=monthly_file_suffix)
 
     if monthly_anom:
         for stn, f in zip(STATION_NAMES, anom_files):
@@ -1153,10 +1166,10 @@ def run_plot(
 
     if daily_anom:
         plot_daily_filled_anomalies(2023, do_smooth=True, window=daily_anom_window,
-                                    suffix='.csv')
+                                    suffix=daily_file_suffix)
 
     if daily_stats:
-        plot_daily_T_statistics()
+        plot_daily_T_statistics(suffix=daily_file_suffix)
 
     os.chdir(old_dir)
     return
