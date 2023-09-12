@@ -724,12 +724,13 @@ def sst_all_time_mean(monthly_mean_file):
 
 
 def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
-                         year_ranges: list):
+                         year_ranges: list, year_range_colours: list):
     """
     Make density subplot using seaborn with an accompanying statistics table
+    :param year_range_colours: list of colours to map to the year ranges
     :param ax:
     :param df: data
-    :param var: variable
+    :param var: variable, 'Temperature(C)' or 'Temperature Anomaly(C)
     :param year_ranges: list of 30-year chunks for separating the data into for statistics
     :return:
     """
@@ -740,25 +741,29 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
     # Do a second check that there are enough data for density plot (10+ years)
     # Don't apply this to the stats table though !
     mask_density_plot = np.repeat(True, len(df))
+    # Add check to remove any nans
+    mask_density_plot[df['Year Range'] == ''] = False
+
     year_ranges_density_plot = []
-    if int(year_ranges[0][-4:]) - int(year_ranges[0][:4]) < 10:
-        mask_density_plot[df.loc[:, 'Year Range'] == year_ranges[0]] = False
-    else:
-        year_ranges_density_plot.append(year_ranges[0])
+    yrc_density_plot = []
+    for i in range(len(year_ranges)):
+        if int(year_ranges[i][-4:]) - int(year_ranges[i][:4]) < 10:  # If less than 10 years
+            mask_density_plot[df.loc[:, 'Year Range'] == year_ranges[i]] = False
+        else:
+            year_ranges_density_plot.append(year_ranges[i])
+            yrc_density_plot.append(year_range_colours[i])
 
-    for i in range(1, len(year_ranges)):
-        year_ranges_density_plot.append(year_ranges[i])
-
-    print(np.nanmin(df.loc[:, 'Year']))
+    # print(np.nanmin(df.loc[:, 'Year']))
     print('year ranges for density plot:', year_ranges_density_plot)
 
     df_density_plot = df.loc[mask_density_plot, :]
+    print(np.unique(df_density_plot['Year Range']))
 
     # Suppress legend since it's in the time series plot
     # Have to reverse dataframe order to plot newest data in front
-    color_end = 3 - len(year_ranges_density_plot) if 3 >= len(year_ranges_density_plot) else None
+    # color_end = 3 - len(year_ranges_density_plot) if 3 >= len(year_ranges_density_plot) else None
     sns.kdeplot(df_density_plot.loc[::-1, :], x=var, hue='Year Range', fill=True,
-                legend=False, ax=ax, palette=sns.color_palette()[3:color_end:-1])
+                legend=False, ax=ax, palette=yrc_density_plot[::-1])  # sns.color_palette()[3:color_end:-1])
     # Add a light grey grid behind the curves
     ax.set_axisbelow(True)
     plt.grid(which='major', axis='both', color='lightgrey')
@@ -785,7 +790,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # Add a table containing statistics below the subplot
     cellText = []
-    for yr in year_ranges[::-1]:
+    for yr in year_ranges:  # year_ranges[::-1]:
         # pandas mean defaults to skipna=True
         mask = df['Year Range'] == yr
         cellText.append(
@@ -801,16 +806,10 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
                 "%.2f" % np.round(df.loc[mask, var].quantile(q=0.75), 2)
             ]
         )
-    # tab = ax.table(cellText=cellText,  # 2d list of str
-    #                  rowLabels=None,
-    #                  rowColours=None,
-    #                  colLabels=stat_table_cols,
-    #                  loc='bottom',
-    #                  fontsize=24)
 
     # Add colors to table rows corresponding to density curves by year range
     ncols = len(cellText[0])
-    tab = table(ax, cellText=cellText[::-1], rowLabels=None,
+    tab = table(ax, cellText=cellText, rowLabels=None,
                 # cellColours=[
                 #     [sns.color_palette('pastel')[3:color_end:-1][k]] * ncols
                 #     for k in range(len(year_ranges))
@@ -842,22 +841,23 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
                  'STD', '25%ile', '75%ile']
     )
 
-    # Remove first year range in box plots if it's too short
+    # Remove any year range in box plots if it's too short and had already been filtered out
     for i, yr in enumerate(year_ranges):
         if yr not in year_ranges_density_plot:
             df_stats.drop(index=i, inplace=True)
-            df_stats.reset_index(drop=True, inplace=True)
+
+    df_stats.reset_index(drop=True, inplace=True)  # Reset index after finishing iterating through the year ranges
 
     # Change datatype from string to float, except for Year Range column
     for col in df_stats.columns[1:]:
         df_stats.loc[:, col] = [float(x) for x in df_stats[col]]
 
     # Add column containing the y coordinates for plotting the boxplots
-    # Set the y values at which the box plots will be plotted, descending order
+    # Set the y values at which the box plots will be plotted (top for oldest, bottom for most recent)
     # Leave some buffer room at the top and bottom edges of the plot
-    df_stats['y values'] = yticks[1:len(df_stats) + 1]
+    df_stats['y values'] = yticks[len(df_stats):0:-1]
 
-    # median as black dot, drawn on top of larger coloured mean dot
+    # Median as black dot, drawn on top of larger coloured mean dot
     # Artists with higher zorder are drawn on top.
     # https://matplotlib.org/stable/gallery/misc/zorder_demo.html#zorder-demo
     sns.scatterplot(df_stats, x='Median', y='y values', legend=False,
@@ -866,7 +866,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # mean as filled dot, match opacity of density curves with alpha
     sns.scatterplot(df_stats, x='Mean', y='y values', hue='Year Range',
-                    palette=sns.color_palette()[3:color_end:-1],
+                    palette=yrc_density_plot,  # sns.color_palette()[3:color_end:-1],
                     legend=False, ax=ax, marker='o', s=18,
                     edgecolor='k', zorder=2.4)
 
@@ -912,7 +912,7 @@ def make_density_subplot(ax: plt.Axes, df: pd.DataFrame, var: str,
 
     # Reset x and y axis limits
     if var == 'Temperature(C)':
-        ax.set_xlim(0, 27)
+        ax.set_xlim(-1, 27)
     elif var == 'Temperature Anomaly(C)':
         ax.set_xlim(-8, 8)
 
@@ -945,23 +945,27 @@ def plot_daily_T_statistics(suffix: str):
     daily_file_list.sort()
 
     # Remove stations we don't want
-    final_daily_list = daily_file_list
+    final_daily_list = daily_file_list[:1]
     # for elem in daily_file_list:
     #     if all([nm not in elem for nm in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
     #         final_daily_list.append(elem)
 
-    # Check on number of files remaining
-    if len(final_daily_list) != len(STATION_NAMES):
-        print('List of daily data files does not match length of STATION_NAMES global variable! Exiting')
-        return
+    # # Check on number of files remaining
+    # if len(final_daily_list) != len(STATION_NAMES):
+    #     print('List of daily data files does not match length of STATION_NAMES global variable! Exiting')
+    #     return
 
     days_per_year = 365
+
+    # Set the axis limits for temperature in the scatter and density plots
+    # Departure Bay is the only active station with negative temperature observations
+    T_axis_lim = (-1, 27)
 
     # # Lower the font size
     # sns.set_theme(font_scale=0.5)
     mpl.rcParams['font.size'] = 5
 
-    # Iterate through the files and make a plot for each station
+    # Iterate through the data files and make a plot for each station
     # for i in range(7, len(final_daily_list)):
     for i in range(len(final_daily_list)):
         print(os.path.basename(final_daily_list[i]))
@@ -1014,27 +1018,29 @@ def plot_daily_T_statistics(suffix: str):
             yr = year_ranges_all[k]
             st = int(yr.split('-')[0])
             en = int(yr.split('-')[1])
+
             # Proceed if there are data from the select year range
             obs_exist_from_year_range = len(df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range']) > 0
-            # min_years_in_range = 10  # short enough to capture 1920's data at Race Rocks
-            # enough_years_in_year_range = np.nanmin(df_obs.loc[:, 'Year']) - st > min_years_in_range
-            if obs_exist_from_year_range:  # & enough_years_in_year_range:
-                if st < int(df_obs['Year'].min()):
-                    st = int(df_obs['Year'].min())
-                    year_ranges_all[k] = str(st) + '-' + yr.split('-')[1]
-                    yr = year_ranges_all[k]
+            if obs_exist_from_year_range:
+                # If series starts later than the start year of standard year range
+                # not including nans
+                year_range_mask = (st <= df_obs['Year']) & (df_obs['Year'] <= en) & (~df_obs['Temperature(C)'].isna())
+
+                if st < int(df_obs.loc[year_range_mask, 'Year'].min()):
+                    st = int(df_obs.loc[year_range_mask, 'Year'].min())
+                if en > int(df_obs.loc[year_range_mask, 'Year'].max()):
+                    en = int(df_obs.loc[year_range_mask, 'Year'].max())
+
+                year_ranges_all[k] = str(st) + '-' + str(en)
+                yr = year_ranges_all[k]
+
                 # Populate the Year Range column
                 df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range'] = yr
                 year_ranges.append(yr)
-            # else:
-            #     # Drop year range from list since no obs from that time
-            #     year_ranges.remove(yr)
-            #     # # Modify the earliest range containing data to what year
-            #     # # each record starts
-            #     # st = int(df_obs['Year'].min())
-            #     # year_ranges[k - 1] = str(st) + '-' + year_ranges[k - 1].split('-')[1]
-            #     # yr = year_ranges[k - 1]
-            #     # df_obs.loc[(st <= year_col) & (year_col <= en), 'Year Range'] = yr
+
+        # Make a check that the Year Range column was fully populated
+        # print(df_obs.loc[df_obs['Year Range'] == '', ['DATE (YYYY-MM-DD)', 'Temperature(C)']])
+        # print(sum(df_obs.loc[df_obs['Year Range'] == '', 'Temperature(C)'].isna()))
 
         # Temporarily change the matplotlib.rcParams object
         # with mpl.rc_context({'font.size': 14, 'font.weight': 'light'}):
@@ -1050,6 +1056,7 @@ def plot_daily_T_statistics(suffix: str):
 
         #          '1904-1933', '1934-1963', '1964-1993', '1994-2023'
         colours = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']  # sns.color_palette(n_colors=len(year_ranges))
+        final_colours = []
         for k in range(len(year_ranges)):
             yr = year_ranges[k]
             mask = df_obs.loc[:, 'Year Range'] == yr
@@ -1057,9 +1064,12 @@ def plot_daily_T_statistics(suffix: str):
                      linewidth=0.2, marker='o', markeredgecolor=None, markersize=0.3,
                      c=colours[4 - len(year_ranges) + k], label=yr,
                      markerfacecolor=colours[4 - len(year_ranges) + k])
+            final_colours.append(colours[4 - len(year_ranges) + k])
+
+        # final_colours = final_colours[::-1]  # Need to invert order for some reason to make it match
         plt.grid(which='major', axis='both', color='lightgrey')
         ax1.legend(loc='upper left', ncol=2)
-        ax1.set_ylim((0, 27))
+        ax1.set_ylim(T_axis_lim)
         ax1.margins(y=0.1)
         ax1.set_ylabel('Temperature ($^\circ$C)')
         # # Increase x tick frequency to every 10 years
@@ -1072,12 +1082,14 @@ def plot_daily_T_statistics(suffix: str):
         # Compute density curve for temperature
         ax2 = plt.subplot(223)  # 221)
 
-        make_density_subplot(ax2, df_obs, 'Temperature(C)', year_ranges)
+        make_density_subplot(ax2, df_obs, 'Temperature(C)', year_ranges,
+                             year_range_colours=final_colours)
 
         # Plot the temperature anomalies
         ax3 = plt.subplot(224)  # 222
 
-        make_density_subplot(ax3, df_obs, 'Temperature Anomaly(C)', year_ranges)
+        make_density_subplot(ax3, df_obs, 'Temperature Anomaly(C)', year_ranges,
+                             year_range_colours=final_colours)
 
         # plt.suptitle(STATION_NAMES[i], horizontalalignment='left')
         # Add padding between first and second row of plots
