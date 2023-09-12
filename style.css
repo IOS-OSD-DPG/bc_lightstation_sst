@@ -39,6 +39,11 @@ img {
 	object-fit: contain;
 }
 
+.TableBorder {
+    border-width: 1px;
+    border-color: Black;
+}
+
 .grouped-plots {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
