@@ -945,7 +945,7 @@ def plot_daily_T_statistics(suffix: str):
     daily_file_list.sort()
 
     # Remove stations we don't want
-    final_daily_list = daily_file_list[:1]
+    final_daily_list = daily_file_list
     # for elem in daily_file_list:
     #     if all([nm not in elem for nm in ['Departure', 'Egg', 'McInnes', 'Nootka']]):
     #         final_daily_list.append(elem)
