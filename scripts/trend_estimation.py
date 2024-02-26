@@ -541,11 +541,12 @@ def ols_model(anom_1d: np.ndarray, date_numeric_1d: np.ndarray):
     return res
 
 
-def calc_trend(search_string: str, max_siml=None, ncores_to_use=None,
+def calc_trend(search_string: str, max_year: int, max_siml=None, ncores_to_use=None,
                sen_flag: int = 0):
     """
     Calculate the trend using least squares and Theil-Sen regression
     and calculate the 95% confidence interval using the *max_siml* number of simulations
+    :param max_year: latest year to include in the analysis
     :param search_string: string to use with glob to find the anomaly data files, i.e.,
         "monthly_anom_from_monthly_mean.csv", so all lightstation files would end with that
         string
@@ -594,6 +595,10 @@ def calc_trend(search_string: str, max_siml=None, ncores_to_use=None,
         station_name = basename.split('_')[0] + ' ' + basename.split('_')[1]
         print(station_name)
         dframe = pd.read_csv(data_file, index_col=[0])
+
+        # Remove unwanted years; index is inclusive of end
+        dframe = dframe.loc[:max_year, :]
+
         # Reformat dataframe into 1d with float type date
         x, y = flatten_dframe(dframe)
 
@@ -653,7 +658,12 @@ def calc_trend(search_string: str, max_siml=None, ncores_to_use=None,
         # Use spline interpolation to fill data gaps
         spline_fn = interp1d(x_gaps_abridged, y_gaps_abridged, kind='slinear')
         x_filled_abridged = x[nstrip_0:-nstrip_1]
-        y_filled_abridged = spline_fn(x_filled_abridged)
+        try:
+            y_filled_abridged = spline_fn(x_filled_abridged)
+        except ValueError as e:
+            print('x_gaps_abridged:', x_gaps_abridged)
+            print('x_filled_abridged:', x_filled_abridged)
+            print(e)
 
         # Check the least-squares trend of the filled time series
         # Get results

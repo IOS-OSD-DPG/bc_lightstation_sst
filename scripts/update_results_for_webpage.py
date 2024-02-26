@@ -12,23 +12,26 @@ updated by hand, comparing the trends of the abridged and entire records for som
 
 # # Calculate monthly mean anomalies from monthly mean observations using the climatologies for each
 # # station for 1991-2020
-# compute_monthly_anomalies(obs_data_suffix='MonthlyTemp.csv')
+# compute_monthly_anomalies(obs_data_suffix='.txt')
 #
-# # Calculate least-squares trends, Theil-Sen trends, and confidence intervals on the least-squares
-# # trends using the Monte Carlo approach from Cummins & Masson (2014)
+# Calculate least-squares trends, Theil-Sen trends, and confidence intervals on the least-squares
+# trends using the Monte Carlo approach from Cummins & Masson (2014)
 # calc_trend(
 #     search_string="monthly_anom_from_monthly_mean.csv",
-#     max_siml=500,  # As you increase the number of simulations to run, the longer it will take
+#     max_year=2023,
+#     max_siml=50000,  # As you increase the number of simulations to run, the longer it will take
 #     ncores_to_use=None,  # Only an option for scikit-learn Theil-Sen method
 #     sen_flag=0  # Use Patrick Cummins' code (translated from MatLab) to calculate the Theil-Sen trends
 # )
 
 # Make several different kinds of plots, which are presented on the github webpage
-run_plot(
-    plot_monthly_anom=True,
-    plot_clim=True,
-    plot_daily_anom=True,
-    plot_daily_anom_window=21,  # unit=days
-    plot_daily_stats=True,
-    plot_availability=True
-)
+# run_plot(
+#     daily_file_suffix='.txt',
+#     monthly_file_suffix='.csv',
+#     # monthly_anom=True,
+#     # clim=True,
+#     daily_anom=True,
+#     # daily_anom_window=21,  # unit=days
+#     # daily_stats=True,
+#     # availability=True
+# )

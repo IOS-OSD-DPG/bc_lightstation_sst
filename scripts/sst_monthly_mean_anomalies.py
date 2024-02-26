@@ -1,11 +1,12 @@
 import pandas as pd
 import os
 import glob
-# import numpy as np
+import numpy as np
 
 # Compute monthly mean sea surface temperature anomalies
 # Compute the anomalies from the 1991-2020 climatology
 
+MONTH_ABBREV = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 # parent_dir = 'C:\\Users\\HourstonH\\Documents\\charles\\our_warming_ocean\\' \
 #              'lighthouse_data\\'
@@ -41,10 +42,23 @@ def compute_monthly_anomalies(obs_data_suffix: str):
     # !! May need to change this extension depending on the file names of subsequent updates
     input_files_all = glob.glob(new_dir + f'./data/monthly/*{obs_data_suffix}')
     input_files_all.sort()
+
+    # Initialize flag to use daily data if monthly not available
+    use_daily = False
+
     if len(input_files_all) == 0:
         print('No monthly mean files found with suffix', obs_data_suffix, 'in directory',
-              new_dir)
-        return
+              new_dir, '; trying daily file folder')
+
+        input_files_all = glob.glob(new_dir + f'./data/daily/*{obs_data_suffix}')
+        input_files_all.sort()
+        if len(input_files_all) > 0:
+            use_daily = True
+        else:
+            print('No daily data found with suffix', obs_data_suffix, 'in directory',
+                  new_dir, '; returning None')
+            return None
+
     input_files = input_files_all
 
     # # Remove stations that aren't being used
@@ -68,24 +82,78 @@ def compute_monthly_anomalies(obs_data_suffix: str):
     clim_df.set_index('Station_name', inplace=True)
 
     for i in range(len(input_files)):
-        station_name = os.path.basename(input_files[i]).split('_')[0] + ' ' + \
-                       os.path.basename(input_files[i]).split('_')[1]
-        # station_name = os.path.basename(input_files[i]).split('MonthlyTemp')[0]
+        if obs_data_suffix == '.csv':
+            if not use_daily:
+                station_name = os.path.basename(input_files[i]).split('_')[0] + ' ' + \
+                               os.path.basename(input_files[i]).split('_')[1]
 
-        # dfin = pd.read_csv(input_files[i], skiprows=1, index_col=[0],
-        #                    na_values=[999.9, 999.99])
-        dfin = pd.read_csv(input_files[i], skiprows=1, index_col=[0],
-                           na_values=[99.99, 999.9, 999.99])
-        dfout = pd.DataFrame(index=dfin.index, columns=dfin.columns)
+                df_monthly = pd.read_csv(input_files[i], skiprows=1, index_col=[0],
+                                         na_values=[99.99, 999.9, 999.99])
 
-        for month in dfin.columns:
+        elif obs_data_suffix == '.txt':
+            if use_daily:
+                station_name = os.path.basename(input_files[i]).split('DailySalTemp')[0]
+
+                df_daily = pd.read_fwf(input_files[i], skiprows=3, na_values=[99.99, 999.9, 999.99])
+
+                # Convert daily data to monthly means
+                unique_years = np.unique(df_daily.loc[:, 'Year'])
+
+                # Initialize DataFrame filled with NaNs
+                df_monthly = pd.DataFrame(index=unique_years, columns=MONTH_ABBREV)
+
+                # Populate the monthly DataFrame
+                for year in unique_years:
+                    for mth_idx in range(len(MONTH_ABBREV)):
+                        subsetter = np.logical_and(
+                            df_daily.loc[:, 'Year'] == year,
+                            df_daily.loc[:, 'Month'] == mth_idx + 1
+                        )
+                        mth = MONTH_ABBREV[mth_idx]
+                        df_monthly.loc[year, mth] = df_daily.loc[subsetter, 'Temperature(C)'].mean(
+                            skipna=True
+                        )
+
+                # Export the results in a csv file matching the usual style
+                df_monthly.index.name = 'Year'
+                monthly_file_name = os.path.join(
+                    new_dir, 'data', 'monthly',
+                    os.path.basename(input_files[i]).replace('DailySalTemp.txt', 'MonthlyTemp.csv')
+                )
+                df_monthly.to_csv(monthly_file_name)
+            else:
+                station_name = os.path.basename(input_files[i]).split('MonthlyTemp')[0]
+
+                df_monthly = pd.read_fwf(input_files[i], skiprows=3, index_col=[0],
+                                         na_values=[99.99, 999.9, 999.99])
+
+        try:
+            dfout = pd.DataFrame(index=df_monthly.index, columns=df_monthly.columns)
+        except NameError:
+            print('Monthly dataframe does not exist')
+            return
+
+        # Compute the anomalies for each month
+        # Station names in index of clim_df may be different than the input station names
+        # csv files and climatology file have full station name e.g. "Amphitrite Point";
+        # txt files have partial station name e.g. "Amphitrite"
+        # station_locator = np.where([station_name.lower() in x.lower() for x in clim_df.index])[0][0]
+        clim_station_name = clim_df.index[i]
+        if not all([lett in clim_station_name for lett in station_name]):
+            print('station names do not match:', station_name, clim_station_name)
+        # print(station_locator, clim_station_name)
+
+        for month in df_monthly.columns:
             # print(dfin, clim_df, sep='\n\n')
-            dfout.loc[:, month
-                      ] = dfin.loc[:, month] - clim_df.loc[station_name, month.upper()]
+            dfout.loc[:, month] = df_monthly.loc[:, month] - clim_df.loc[clim_station_name, month.upper()]
 
+        # Export monthly anomalies to file
         dfout.to_csv(
-            os.path.join(new_dir, 'analysis',
-                         station_name.replace(' ', '_') + '_monthly_anom_from_monthly_mean.csv')
+            os.path.join(
+                new_dir,
+                'analysis',
+                station_name.replace(' ', '_') + '_monthly_anom_from_monthly_mean.csv'
+            )
         )
 
     # Change working directory back

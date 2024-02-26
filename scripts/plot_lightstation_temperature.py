@@ -219,6 +219,7 @@ def plot_data_gaps(suffix: str):
 
 def plot_daily_filled_anomalies(year: int, suffix: str, do_smooth: bool, window=None):
     """
+    WILL NOT work if rows containing missing data are omitted instead of included and populated with 999.9
     Plot the most recent year's raw data on top of the daily average of all time
     for each station
     inputs:
@@ -258,18 +259,22 @@ def plot_daily_filled_anomalies(year: int, suffix: str, do_smooth: bool, window=
     month_numbers = np.arange(1, 12 + 1, 1)
 
     # Set y axis limits to visually compare plots more easily
-    ylim = (4, 20)
+    ylim = (4, 22.5)
 
     xtick_labels = MONTH_ABBREV
-    # Get the xtick locations in the correct units
+    # Get the xtick locations in the correct units, set to 1st of each month
     month_datetime = pd.to_datetime([f'{m}/1/{year}' for m in month_numbers])
     xtick_locations = month_datetime.dayofyear.to_numpy()
 
     # subplot_letters = 'abcdefgh'
 
+    # Iterate through all the stations
     for i in range(len(final_daily_list)):
-        # Read in fixed width file
+        # print(final_daily_list[i])
+        
+        # Choose right parameters to read in data from file
         if suffix.endswith('txt'):
+            # Read in fixed width file
             df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
                                  na_values=[99.99, 999.9, 999.99])
             temperature_colname = 'Temperature(C)'
@@ -308,11 +313,13 @@ def plot_daily_filled_anomalies(year: int, suffix: str, do_smooth: bool, window=
             daily_clim.loc[k - 1] = df_obs.loc[
                 df_obs['Datetime'].dt.dayofyear == k, temperature_colname
             ].mean(skipna=True)
+
         if do_smooth:
             # Use 21-day rolling average as default
             if window is None:
                 window = 21
-            # Pad the start of the climatology with *window*-number of days
+
+            # Pad the start of the climatology with *window*-number of days --
             # of the end of the climatology, so that there are no nans in January
             daily_clim_pad = pd.Series(data=np.zeros(len(daily_clim) + window))
 
@@ -321,8 +328,12 @@ def plot_daily_filled_anomalies(year: int, suffix: str, do_smooth: bool, window=
             # maybe because the indices aren't aligned?
             daily_clim_pad.loc[:window - 1] = daily_clim.loc[len(daily_clim) - window:].tolist()
             daily_clim_pad.loc[window:] = daily_clim.loc[:].tolist()
+
+            # Take the rolling average
+
             # Set the labels at the center of the window, defaults to right of window
             daily_clim_smooth = daily_clim_pad.rolling(window=window, center=True).mean()
+
             # Remove the pads
             clim_to_plot = daily_clim_smooth.loc[window:]
 
@@ -338,26 +349,21 @@ def plot_daily_filled_anomalies(year: int, suffix: str, do_smooth: bool, window=
 
         # Plot the anomalies: x, y1, y2
         # Get the last day of year of the chosen year to index the climatology with
-        ax.fill_between(
-            df_obs.loc[mask_year, 'Datetime'].dt.dayofyear,
-            clim_to_plot.loc[:last_dayofyear - 1],  # -1 because indexing starts at zero
-            df_obs.loc[mask_year, temperature_colname],
-            where=(
-                    df_obs.loc[mask_year, temperature_colname].to_numpy() >
-                    clim_to_plot.loc[:last_dayofyear - 1].to_numpy()
-            ),
-            color='r'
-        )
-        ax.fill_between(
-            df_obs.loc[mask_year, 'Datetime'].dt.dayofyear,
-            clim_to_plot.loc[:last_dayofyear - 1],
-            df_obs.loc[mask_year, temperature_colname],
-            where=(
-                    df_obs.loc[mask_year, temperature_colname].to_numpy() <
-                    clim_to_plot.loc[:last_dayofyear - 1].to_numpy()
-            ),
-            color='b'
-        )
+
+        x = df_obs.loc[mask_year, 'Datetime'].dt.dayofyear
+        y1 = clim_to_plot.loc[:last_dayofyear - 1].to_numpy()  # -1 because indexing starts at zero
+        y2 = df_obs.loc[mask_year, temperature_colname].to_numpy()
+
+        # 304, 365, 304
+        # print(len(x), len(y1), len(y2))
+        try:
+            ax.fill_between(x, y1, y2, where=(y2 > y1), color='r')
+            ax.fill_between(x, y1, y2, where=(y2 < y1), color='b')
+        except ValueError as e:
+            print('Rows are missing from observational dataset: If these are NaN then populate with fillValue')
+            # e.g. ValueError: operands could not be broadcast together with shapes (304,) (365,) with where=(y2>y1)
+            print(e)
+
         # Format the plot
 
         # Set the y limits
@@ -503,6 +509,12 @@ def multi_trend_table_image():
 
 
 def plot_climatology(clim_file, output_dir):
+    """
+    Plot SST climatology for 1991-2020
+    :param clim_file:
+    :param output_dir:
+    :return:
+    """
     clim_df = pd.read_csv(clim_file, index_col=[0])
     month_numbers = np.arange(1, 12 + 1)
 
@@ -969,18 +981,23 @@ def plot_daily_T_statistics(suffix: str):
     # for i in range(7, len(final_daily_list)):
     for i in range(len(final_daily_list)):
         print(os.path.basename(final_daily_list[i]))
-        # Read in fixed width file
-        # df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
-        #                      na_values=[99.99, 999.9, 999.99])
-        df_obs = pd.read_csv(final_daily_list[i], skiprows=1,
-                             na_values=[99.99, 999.9, 999.99])
 
-        # Compute all-time daily means and use to get anomalies
+        if 'txt' in suffix:
+            # Read in fixed width file
+            df_obs = pd.read_fwf(final_daily_list[i], skiprows=3,
+                                 na_values=[99.99, 999.9, 999.99])
+        elif 'csv' in suffix:
+            df_obs = pd.read_csv(final_daily_list[i], skiprows=1,
+                                 na_values=[99.99, 999.9, 999.99])
 
-        # Convert the year-month-day columns into floats
-        df_obs['Year'] = [int(x[:4]) for x in df_obs['DATE (YYYY-MM-DD)']]
-        df_obs['Month'] = [int(x[5:7]) for x in df_obs['DATE (YYYY-MM-DD)']]
-        df_obs['Day'] = [int(x[8:10]) for x in df_obs['DATE (YYYY-MM-DD)']]
+            # Compute all-time daily means and use to get anomalies
+
+            # Convert the year-month-day columns into floats
+            df_obs['Year'] = [int(x[:4]) for x in df_obs['DATE (YYYY-MM-DD)']]
+            df_obs['Month'] = [int(x[5:7]) for x in df_obs['DATE (YYYY-MM-DD)']]
+            df_obs['Day'] = [int(x[8:10]) for x in df_obs['DATE (YYYY-MM-DD)']]
+
+        # Add column for pandas datetime
         df_obs['Datetime'] = pd.to_datetime(df_obs.loc[:, ['Year', 'Month', 'Day']])
         # df_obs['Float_year'] = df_obs['Datetime'].dt.dayofyear / days_per_year + df_obs['Year']
 
@@ -1108,6 +1125,8 @@ def plot_daily_T_statistics(suffix: str):
 
 
 def run_plot(
+        daily_file_suffix='.csv',
+        monthly_file_suffix='.csv',
         monthly_anom: bool = False,
         monthly_table: bool = False,
         clim: bool = False,
@@ -1118,6 +1137,8 @@ def run_plot(
 ):
     """
     Run plotting functions
+    :param daily_file_suffix: '.txt' or '.csv' for searching the /data/daily/ folder
+    :param monthly_file_suffix: '.txt' or '.csv' for searching the /data/monthly/ folder
     :param monthly_anom: Plot monthly anomalies with least-squares trend
     and Monte Carlo 95% confidence interval
     :param monthly_table: Save table of monthly mean trends in anomalies in PNG and CSV formats
@@ -1133,9 +1154,6 @@ def run_plot(
     old_dir = os.getcwd()
     new_dir = os.path.dirname(old_dir)
     os.chdir(new_dir)
-
-    daily_file_suffix = '.csv'
-    monthly_file_suffix = '.csv'
 
     # Plot climatological monthly means at each station
     output_folder = os.path.join(new_dir, 'figures')
