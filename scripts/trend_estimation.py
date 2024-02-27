@@ -165,22 +165,23 @@ def nans_to_strip(abridged: bool):
     # Number of stations being analyzed
     N = 12
     nstrip = np.zeros((N, 2), dtype=int)
-    nstrip[0, :] = [7, 9]  # Amphitrite  ,8
-    nstrip[1, :] = [3, 9]  # Bonilla ,8
-    nstrip[2, :] = [3, 2]  # Chrome ,8, doesn't have 2023 data yet
-    nstrip[3, :] = [9, 6]  # Departure Bay
-    nstrip[4, :] = [2, 6]  # Egg Island
-    nstrip[5, :] = [4, 48]  # Entrance to Dec 2019
-    nstrip[6, :] = [0, 9]  # Kains
-    nstrip[7, :] = [50, 9]  # Langara starting Mar 1940
-    nstrip[8, :] = [6, 6]  # McInnes Island
-    nstrip[9, :] = [7, 6]  # Nootka Point, including data before the big gap
-    nstrip[10, :] = [0, 9]  # Pine ,8
-    nstrip[11, :] = [1, 9]  # Race Rocks  ,8
+    nstrip[0, :] = [7, 0]  # Amphitrite  ,8
+    nstrip[1, :] = [3, 0]  # Bonilla ,8
+    nstrip[2, :] = [3, 14]  # Chrome ,8, ignore 2 observations from 2023 and go to Oct 2022
+    nstrip[3, :] = [9, 0]  # Departure Bay
+    nstrip[4, :] = [2, 0]  # Egg Island
+    nstrip[5, :] = [4, 0]  # Entrance to Dec 2019, 48 idx -- Update 2024-02-26 to end of 2023
+    nstrip[6, :] = [0, 0]  # Kains -- 8 mth gap in 2022 kept in for now...
+    nstrip[7, :] = [50, 0]  # Langara starting Mar 1940
+    nstrip[8, :] = [6, 11]  # McInnes Island currently goes to Jan 2024
+    nstrip[9, :] = [7, 0]  # Nootka Point, including data before the big gap
+    nstrip[10, :] = [0, 0]  # Pine ,8
+    nstrip[11, :] = [1, 0]  # Race Rocks  ,8
 
     if not abridged:
-        nstrip[3, :] = [4, 9]  # Entrance to Mar 2023
-        nstrip[5, :] = [9, 9]  # Langara starting Oct 1936
+        nstrip[2, :] = [3, 2]  # Chrome to Oct. 2023
+        # nstrip[5, :] = [4, 9]  # Entrance to Mar 2023
+        nstrip[7, :] = [9, 0]  # Langara starting Oct 1936
     return nstrip
 
 
@@ -544,10 +545,10 @@ def ols_model(anom_1d: np.ndarray, date_numeric_1d: np.ndarray):
 def calc_trend(search_string: str, max_year: int, max_siml=None, ncores_to_use=None,
                sen_flag: int = 0):
     """
-    Calculate the trend using least squares and Theil-Sen regression
+    Calculate the trend of monthly mean anomaly data using least squares and Theil-Sen regression
     and calculate the 95% confidence interval using the *max_siml* number of simulations
     :param max_year: latest year to include in the analysis
-    :param search_string: string to use with glob to find the anomaly data files, i.e.,
+    :param search_string: string to use with glob to find the monthly anomaly data files, i.e.,
         "monthly_anom_from_monthly_mean.csv", so all lightstation files would end with that
         string
     :param max_siml: maximum number of simulations to do
@@ -588,7 +589,7 @@ def calc_trend(search_string: str, max_year: int, max_siml=None, ncores_to_use=N
     maxlag = 50
 
     # Iterate through each lighthouse station
-    for i in range(len(file_list)):
+    for i in range(2, len(file_list)):
         data_file = file_list[i]
         data_file_idx = i
         basename = os.path.basename(data_file)
@@ -622,8 +623,13 @@ def calc_trend(search_string: str, max_year: int, max_siml=None, ncores_to_use=N
         # Compute the trends on the gappy abridged records
         nstrip_0, nstrip_1 = [nstrip_abridged[data_file_idx, 0], nstrip_abridged[data_file_idx, 1]]
 
-        x_gaps_abridged = x[nstrip_0:-nstrip_1][pd.notna(y[nstrip_0:-nstrip_1])]
-        y_gaps_abridged = y[nstrip_0:-nstrip_1][pd.notna(y[nstrip_0:-nstrip_1])]
+        if nstrip_1 > 0:
+            nstrip_1 = -nstrip_1
+        else:
+            nstrip_1 = None  # nstrip_1 == 0
+
+        x_gaps_abridged = x[nstrip_0:nstrip_1][pd.notna(y[nstrip_0:nstrip_1])]
+        y_gaps_abridged = y[nstrip_0:nstrip_1][pd.notna(y[nstrip_0:nstrip_1])]
 
         res_ols_abridged = ols_model(y_gaps_abridged, x_gaps_abridged)
         trend_century_ols_abridged = res_ols_abridged.params.Date * 100
@@ -657,7 +663,7 @@ def calc_trend(search_string: str, max_year: int, max_siml=None, ncores_to_use=N
         # Strip away NaN entries at beginning and end of records to avoid extrapolation
         # Use spline interpolation to fill data gaps
         spline_fn = interp1d(x_gaps_abridged, y_gaps_abridged, kind='slinear')
-        x_filled_abridged = x[nstrip_0:-nstrip_1]
+        x_filled_abridged = x[nstrip_0:nstrip_1]
         try:
             y_filled_abridged = spline_fn(x_filled_abridged)
         except ValueError as e:

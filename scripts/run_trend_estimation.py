@@ -1,6 +1,10 @@
 from scripts.trend_estimation import calc_trend
 # import os
 
+"""
+IMPORTANT: must update indices in trend_estimation.nans_to_strip() before running the analysis on new data
+"""
+
 # # Patrick
 
 # Working directory
