@@ -450,13 +450,18 @@ def multi_trend_table_image():
     # if len(raw_files) == 0:
     #     print('No monthly temperature data files found; try a different search key')
     #     return
-    raw_files = glob.glob(data_dir + '/*Average_Monthly_Sea_Surface_Temperature*.csv')
+    raw_files = glob.glob(data_dir + '/*.csv')  # Average_Monthly_Sea_Surface_Temperature
     raw_files.sort()
 
     # Iterate through all the files
     for i in range(len(raw_files)):
-        df_in = pd.read_csv(raw_files[i], skiprows=1, index_col='YEAR',
-                            na_values=[99.99, 999.9, 999.99])
+        if 'Average_Monthly_Sea_Surface_Temperature' in raw_files[i]:
+            df_in = pd.read_csv(raw_files[i], skiprows=1, index_col=[0],
+                                na_values=[99.99, 999.9, 999.99])
+        elif 'MonthlyTemp' in raw_files[i]:
+            # Case for files converted from daily txt files
+            df_in = pd.read_csv(raw_files[i], index_col=[0],
+                                na_values=[99.99, 999.9, 999.99])
 
         # Get the start and end month and year of analysis period
         # with the end including the very last record, different than nans_to_strip() function
